@@ -10,6 +10,10 @@ import { useLanguageStore } from '../../store/useLanguageStore';
 import { useTranslation } from '../../hooks/useTranslation';
 import type { Language } from '../../utils/i18n';
 
+import { usePreloadTranslations } from '../../hooks/useTranslation';
+import LanguagePicker from '../../components/ui/LanguagePicker';
+import { getLanguageByCode } from '../../utils/languages';
+
 export default function LoginScreen() {
     const router = useRouter();
     const [phone, setPhone] = useState('');
@@ -17,10 +21,32 @@ export default function LoginScreen() {
     const [otpSent, setOtpSent] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [showLangDrop, setShowLangDrop] = useState(false);
+    const [showLangModal, setShowLangModal] = useState(false);
     const { setSession } = useAuthStore();
     const { language, setLanguage } = useLanguageStore();
-    const { t } = useTranslation();
+
+    // Add preloading for login strings to make language switching instant
+    const { t } = usePreloadTranslations([
+        'login.title',
+        'login.otpTitle',
+        'login.phoneLabel',
+        'login.phonePlaceholder',
+        'login.otpLabel',
+        'login.otpPlaceholder',
+        'login.sendOtp',
+        'login.verifyOtp',
+        'login.resendOtp',
+        'login.terms',
+        'login.phoneError',
+        'login.otpError',
+        'login.invalidOtp',
+        'login.otpFailed',
+        'login.languageLabel',
+        'common.appName',
+        'common.tagline',
+    ]);
+
+    const selectedLang = getLanguageByCode(language);
 
     const handleSendOtp = async () => {
         if (phone.length < 10) {
@@ -57,11 +83,6 @@ export default function LoginScreen() {
         }
     };
 
-    const LANGUAGES: { code: Language; label: string; flag: string }[] = [
-        { code: 'en', label: 'English', flag: '🇬🇧' },
-        { code: 'hi', label: 'हिंदी', flag: '🇮🇳' },
-    ];
-
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -83,33 +104,19 @@ export default function LoginScreen() {
                     <Text style={styles.langLabel}>{t('login.languageLabel')}:</Text>
                     <TouchableOpacity
                         style={styles.langSelector}
-                        onPress={() => setShowLangDrop(!showLangDrop)}
+                        onPress={() => setShowLangModal(true)}
                         activeOpacity={0.8}
                     >
                         <Text style={styles.langSelectorText}>
-                            {LANGUAGES.find(l => l.code === language)?.flag}{' '}
-                            {LANGUAGES.find(l => l.code === language)?.label}
+                            {selectedLang.flag} {selectedLang.nativeName}
                         </Text>
-                        <Text style={styles.langChevron}>{showLangDrop ? '▲' : '▼'}</Text>
+                        <Text style={styles.langChevron}>▼</Text>
                     </TouchableOpacity>
 
-                    {showLangDrop && (
-                        <View style={styles.langDropdown}>
-                            {LANGUAGES.map(lang => (
-                                <TouchableOpacity
-                                    key={lang.code}
-                                    style={[styles.langOption, language === lang.code && styles.langOptionActive]}
-                                    onPress={() => {
-                                        setLanguage(lang.code);
-                                        setShowLangDrop(false);
-                                    }}
-                                >
-                                    <Text style={styles.langOptionText}>{lang.flag} {lang.label}</Text>
-                                    {language === lang.code && <Text style={styles.langCheck}>✓</Text>}
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    )}
+                    <LanguagePicker
+                        visible={showLangModal}
+                        onClose={() => setShowLangModal(false)}
+                    />
                 </View>
 
                 <Text style={styles.formTitle}>

@@ -22,6 +22,8 @@ const translations = {
             english: 'English',
             hindi: 'हिंदी',
             selectLanguage: 'Select Language',
+            user: 'User',
+            notSet: 'Not set',
         },
 
         // ---- Login ----
@@ -99,6 +101,9 @@ const translations = {
             healthTip: 'Health Tip',
             healthTipText: 'Check wheat for rust disease',
             setLocation: 'Set your location',
+            goodMorning: 'Good Morning',
+            goodAfternoon: 'Good Afternoon',
+            goodEvening: 'Good Evening',
         },
 
         // ---- Buyer Dashboard ----
@@ -134,6 +139,11 @@ const translations = {
             addToCart: 'Add to Cart',
             loading: 'Setting up your marketplace',
             loadingSubtext: 'Handpicked from local farmers 🌿',
+            deals: {
+                tomatoes: 'Farm Fresh Tomatoes',
+                rice: 'Organic Basmati Rice',
+                mangoes: 'Fresh Alphonso Mangoes',
+            },
         },
 
         // ---- Disease Detection ----
@@ -258,7 +268,15 @@ const translations = {
             home: 'Home',
             scan: 'Scan',
             market: 'Market',
+            rentals: 'Rentals',
             profile: 'Profile',
+        },
+        // ---- Marketplace Categories ----
+        categories: {
+            seeds: 'Seeds',
+            fertilizers: 'Fertilizers',
+            pesticides: 'Pesticides',
+            crops: 'Crops',
         },
     },
 
@@ -279,6 +297,8 @@ const translations = {
             english: 'English',
             hindi: 'हिंदी',
             selectLanguage: 'भाषा चुनें',
+            user: 'उपयोगकर्ता',
+            notSet: 'सेट नहीं है',
         },
 
         // ---- Login ----
@@ -356,6 +376,9 @@ const translations = {
             healthTip: 'स्वास्थ्य सुझाव',
             healthTipText: 'गेहूं में रतुआ रोग की जांच करें',
             setLocation: 'अपना स्थान सेट करें',
+            goodMorning: 'सुप्रभात',
+            goodAfternoon: 'नमस्ते',
+            goodEvening: 'शुभ संध्या',
         },
 
         // ---- Buyer Dashboard ----
@@ -391,6 +414,11 @@ const translations = {
             addToCart: 'टोकरी में जोड़ें',
             loading: 'आपका बाज़ार तैयार हो रहा है',
             loadingSubtext: 'स्थानीय किसानों से चुना गया 🌿',
+            deals: {
+                tomatoes: 'फार्म ताजा टमाटर',
+                rice: 'जैविक बासमती चावल',
+                mangoes: 'ताजा अल्फांसो आम',
+            },
         },
 
         // ---- Disease Detection ----
@@ -515,7 +543,15 @@ const translations = {
             home: 'होम',
             scan: 'स्कैन',
             market: 'बाज़ार',
+            rentals: 'किराये पर',
             profile: 'प्रोफ़ाइल',
+        },
+        // ---- Marketplace Categories ----
+        categories: {
+            seeds: 'बीज',
+            fertilizers: 'उर्वरक',
+            pesticides: 'कीटनाशक',
+            crops: 'फसलें',
         },
     },
 };

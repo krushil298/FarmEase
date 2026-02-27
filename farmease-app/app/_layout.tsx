@@ -3,16 +3,13 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
-import { useLanguageStore } from '../store/useLanguageStore';
 import { colors } from '../utils/theme';
 
 export default function RootLayout() {
     const { initialize, isLoading } = useAuthStore();
-    const { initialize: initLang } = useLanguageStore();
 
     useEffect(() => {
         initialize();
-        initLang();
     }, []);
 
     if (isLoading) {

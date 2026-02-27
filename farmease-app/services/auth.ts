@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { UserRole } from '../utils/constants';
+import { Platform } from 'react-native';
 
 export interface UserProfile {
     id: string;
@@ -14,7 +15,36 @@ export interface UserProfile {
     created_at: string;
 }
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// ─── Platform-aware storage ─────────────────────────────────────────────────
+// AsyncStorage doesn't work on web; use localStorage there instead.
+
+const storage = {
+    getItem: async (key: string): Promise<string | null> => {
+        if (Platform.OS === 'web') {
+            return localStorage.getItem(key);
+        }
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        return AsyncStorage.getItem(key);
+    },
+    setItem: async (key: string, value: string): Promise<void> => {
+        if (Platform.OS === 'web') {
+            localStorage.setItem(key, value);
+            return;
+        }
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        return AsyncStorage.setItem(key, value);
+    },
+    removeItem: async (key: string): Promise<void> => {
+        if (Platform.OS === 'web') {
+            localStorage.removeItem(key);
+            return;
+        }
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        return AsyncStorage.removeItem(key);
+    },
+};
+
+// ────────────────────────────────────────────────────────────────────────────
 
 // Send OTP to phone number
 export const sendOtp = async (phone: string) => {
@@ -40,9 +70,8 @@ export const verifyOtp = async (phone: string, token: string) => {
             user: dummyUser
         };
 
-        // Save dummy session and profile
-        await AsyncStorage.setItem('dummy_session', JSON.stringify(session));
-        await AsyncStorage.setItem('dummy_profile', JSON.stringify(dummyUser));
+        await storage.setItem('dummy_session', JSON.stringify(session));
+        await storage.setItem('dummy_profile', JSON.stringify(dummyUser));
 
         return { session, user: dummyUser };
     }
@@ -54,12 +83,11 @@ export const verifyOtp = async (phone: string, token: string) => {
 
 // Create or update user profile
 export const upsertProfile = async (profile: Partial<UserProfile>) => {
-    // If it's the dummy user, just update local storage
     if (profile.id?.startsWith('dummy')) {
-        const stored = await AsyncStorage.getItem('dummy_profile');
+        const stored = await storage.getItem('dummy_profile');
         const currentProfile = stored ? JSON.parse(stored) : {};
         const newProfile = { ...currentProfile, ...profile };
-        await AsyncStorage.setItem('dummy_profile', JSON.stringify(newProfile));
+        await storage.setItem('dummy_profile', JSON.stringify(newProfile));
         return newProfile as UserProfile;
     }
 
@@ -75,7 +103,7 @@ export const upsertProfile = async (profile: Partial<UserProfile>) => {
 // Get user profile
 export const getProfile = async (userId: string) => {
     if (userId.startsWith('dummy')) {
-        const stored = await AsyncStorage.getItem('dummy_profile');
+        const stored = await storage.getItem('dummy_profile');
         return stored ? JSON.parse(stored) as UserProfile : null;
     }
 
@@ -86,19 +114,26 @@ export const getProfile = async (userId: string) => {
 
 // Sign out
 export const signOut = async () => {
-    await AsyncStorage.removeItem('dummy_session');
-    await AsyncStorage.removeItem('dummy_profile');
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    await storage.removeItem('dummy_session');
+    await storage.removeItem('dummy_profile');
+    try {
+        await supabase.auth.signOut();
+    } catch {
+        // ignore signout errors on web
+    }
 };
 
 // Get current session
 export const getSession = async () => {
-    const dummySessionStr = await AsyncStorage.getItem('dummy_session');
-    if (dummySessionStr) {
-        return JSON.parse(dummySessionStr);
+    try {
+        const dummySessionStr = await storage.getItem('dummy_session');
+        if (dummySessionStr) {
+            return JSON.parse(dummySessionStr);
+        }
+        const { data, error } = await supabase.auth.getSession();
+        if (error) return null;
+        return data.session;
+    } catch {
+        return null;
     }
-    const { data, error } = await supabase.auth.getSession();
-    if (error) throw error;
-    return data.session;
 };

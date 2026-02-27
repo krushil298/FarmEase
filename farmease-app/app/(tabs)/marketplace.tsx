@@ -8,12 +8,22 @@ import { CROP_CATEGORIES } from '../../utils/constants';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatPrice } from '../../utils/helpers';
 import { fetchProducts, Product } from '../../services/marketplace';
+import MarketplaceLoader from '../../components/ui/MarketplaceLoader';
+import { usePreloadTranslations } from '../../hooks/useTranslation';
 
 const STATUSBAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44;
 
 export default function MarketplaceScreen() {
     const router = useRouter();
     const { role } = useAuthStore();
+    const { t } = usePreloadTranslations([
+        'marketplace.title',
+        'marketplace.mandiTitle',
+        'marketplace.mandiSubtext',
+        'marketplace.addToCart',
+        'marketplace.noProducts',
+        'marketplace.noProductsDesc',
+    ]);
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [products, setProducts] = useState<Product[]>([]);

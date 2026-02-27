@@ -24,7 +24,7 @@ export default function Input({
             <View style={[styles.inputWrapper, error && styles.inputError]}>
                 {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
                 <TextInput
-                    style={[styles.input, leftIcon && { paddingLeft: 0 }]}
+                    style={[styles.input, leftIcon ? { paddingLeft: 0 } : undefined]}
                     placeholderTextColor={colors.textLight}
                     {...props}
                 />

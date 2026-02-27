@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, spacing, typography, borderRadius, shadows } from '../../utils/theme';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -8,8 +8,12 @@ import { getGreeting } from '../../utils/helpers';
 import Card from '../../components/ui/Card';
 import WeatherWidget from '../../components/dashboard/WeatherWidget';
 import CategoryGrid from '../../components/dashboard/CategoryGrid';
+import QuickActions from '../../components/dashboard/QuickActions';
 import { DailyTipModal, useDailyTip, ALL_TIPS } from '../../components/dashboard/DailyTipModal';
 import type { DailyTip } from '../../components/dashboard/DailyTipModal';
+import { usePreloadTranslations } from '../../hooks/useTranslation';
+import ChatFAB from '../../components/chat/ChatFAB';
+import ChatbotModal from '../../components/chat/ChatbotModal';
 
 // Category data for horizontal scroll
 const CATEGORIES = [
@@ -47,10 +51,58 @@ const TIP_MODAL_MAP: Record<string, DailyTip> = {
 export default function DashboardScreen() {
     const router = useRouter();
     const { user, role } = useAuthStore();
-    const { address: detectedAddress } = useFarmStore();
+    const { address: detectedAddress, location } = useFarmStore();
+    const { t, isTranslating } = usePreloadTranslations([
+        'Dashboard',
+        'Farming Tips',
+        'profile.farmer',
+        'profile.buyer',
+        'dashboard.setLocation',
+        'dashboard.quickActions',
+        'dashboard.diseaseDetection',
+        'dashboard.diseaseDetectionDesc',
+        'dashboard.cropRecommend',
+        'dashboard.cropRecommendDesc',
+        'dashboard.marketplace',
+        'dashboard.marketplaceDesc',
+        'dashboard.rentEquipment',
+        'dashboard.rentEquipmentDesc',
+        'dashboard.govSchemes',
+        'dashboard.govSchemesDesc',
+        'dashboard.seasonalTip',
+        'dashboard.seasonalTipText',
+        'dashboard.marketAlert',
+        'dashboard.marketAlertText',
+        'dashboard.healthTip',
+        'dashboard.healthTipText',
+        'dashboard.goodEvening',
+        'tabs.home',
+        'tabs.scan',
+        'tabs.market',
+        'tabs.rentals',
+        'tabs.profile',
+        'dashboard.shopCategories',
+        'categories.seeds',
+        'categories.fertilizers',
+        'categories.pesticides',
+        'categories.crops',
+    ]);
     const [refreshing, setRefreshing] = useState(false);
     const { showTip, dismissTip, tip: dailyTip } = useDailyTip();
     const [tappedTip, setTappedTip] = useState<DailyTip | null>(null);
+    const [showChat, setShowChat] = useState(false);
+
+    const TIPS = [
+        { title: t('dashboard.seasonalTip'), text: t('dashboard.seasonalTipText'), emoji: '🌧️', bg: '#3E6B48' },
+        { title: t('dashboard.marketAlert'), text: t('dashboard.marketAlertText'), emoji: '📈', bg: '#B8860B' },
+        { title: t('dashboard.healthTip'), text: t('dashboard.healthTipText'), emoji: '🔍', bg: '#8B5E3C' },
+    ];
+
+    const TIP_MODAL_MAP: Record<string, DailyTip> = {
+        [t('dashboard.seasonalTip')]: ALL_TIPS.find(t => t.category === 'Seasonal Tip')!,
+        [t('dashboard.marketAlert')]: ALL_TIPS.find(t => t.category === 'Market Alert')!,
+        [t('dashboard.healthTip')]: ALL_TIPS.find(t => t.category === 'Health Tip')!,
+    };
 
     const categoryRoutes: Record<string, string> = {
         '1': '/(tabs)/detect',
@@ -67,110 +119,70 @@ export default function DashboardScreen() {
     };
 
     return (
-        <ScrollView
-            style={styles.container}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-        >
-            {/* Greeting + Weather */}
-            <View style={styles.greetingSection}>
-                <View>
-                    <Text style={styles.greeting}>{getGreeting()}, {user?.name || (role === 'farmer' ? 'Farmer' : 'Buyer')}!</Text>
-                    <Text style={styles.location}>📍 {detectedAddress || user?.farm_location || 'Detecting location...'}</Text>
-                </View>
-            </View>
-
-            {/* Weather Widget */}
-            <WeatherWidget />
-
-            {/* Category Grid (AI Images) */}
-            <CategoryGrid />
-
-            {/* Farming Tips Carousel */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tipsRow}>
-                {TIPS.map((tip, i) => (
-                    <TouchableOpacity
-                        key={i}
-                        style={[styles.tipCard, { backgroundColor: tip.bg }]}
-                        activeOpacity={0.8}
-                        onPress={() => setTappedTip(TIP_MODAL_MAP[tip.title] || null)}
-                    >
-                        <Text style={styles.tipEmoji}>{tip.emoji}</Text>
-                        <View>
-                            <Text style={styles.tipTitle}>{tip.title}</Text>
-                            <Text style={styles.tipText}>{tip.text}</Text>
+        <View style={{ flex: 1 }}>
+            <ScrollView
+                style={styles.container}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+            >
+                {/* Greeting + Weather */}
+                <View style={styles.greetingSection}>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.greeting}>{t(getGreeting())}, {user?.name || (role === 'farmer' ? t('profile.farmer') : t('profile.buyer'))}!</Text>
+                        <Text style={styles.location}>📍 {detectedAddress || user?.farm_location || t('dashboard.setLocation')}</Text>
+                    </View>
+                    {isTranslating && (
+                        <View style={styles.translatingBadge}>
+                            <ActivityIndicator size="small" color={colors.primary} />
+                            <Text style={styles.translatingText}>Translating...</Text>
                         </View>
-                    </TouchableOpacity>
-                ))}
+                    )}
+                </View>
+
+                {/* Weather Widget */}
+                <WeatherWidget />
+
+                {/* Category Grid (AI Images) */}
+                <CategoryGrid />
+
+                {/* Farming Tips */}
+                <Text style={styles.sectionTitle}>🌿 {t('Farming Tips')}</Text>
+                <View style={styles.tipsRow}>
+                    {TIPS.map((tip, i) => (
+                        <TouchableOpacity
+                            key={i}
+                            style={[styles.tipCard, { backgroundColor: tip.bg }]}
+                            activeOpacity={0.8}
+                            onPress={() => setTappedTip(TIP_MODAL_MAP[tip.title] || null)}
+                        >
+                            <Text style={styles.tipEmoji}>{tip.emoji}</Text>
+                            <Text style={styles.tipTitle} numberOfLines={1}>{tip.title}</Text>
+                            <Text style={styles.tipText} numberOfLines={2}>{tip.text}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+                {/* Quick Actions Grid */}
+                <QuickActions />
+
+
+
+                <View style={{ height: spacing['2xl'] }} />
+
+                {/* Daily Tip Popup (auto once per day) */}
+                <DailyTipModal visible={showTip} onClose={dismissTip} tip={dailyTip} />
+
+                {/* Tip modal when tapping a tip card */}
+                <DailyTipModal
+                    visible={!!tappedTip}
+                    onClose={() => setTappedTip(null)}
+                    tip={tappedTip}
+                />
             </ScrollView>
 
-            {/* Quick Actions Grid */}
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <View style={styles.actionsGrid}>
-                {QUICK_ACTIONS.map((action, i) => (
-                    <TouchableOpacity
-                        key={i}
-                        style={[styles.actionCard, { backgroundColor: action.color }]}
-                        onPress={() => router.push(action.route as any)}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={styles.actionEmoji}>{action.emoji}</Text>
-                        <Text style={styles.actionTitle}>{action.title}</Text>
-                        <Text style={styles.actionDesc}>{action.desc}</Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
-
-            {/* Farmer-only: Soil Intelligence */}
-            {role === 'farmer' && (
-                <>
-                    <Text style={styles.sectionTitle}>Soil Intelligence</Text>
-                    <TouchableOpacity
-                        style={styles.soilCard}
-                        onPress={() => router.push('/crop-recommend' as any)}
-                    >
-                        <View style={styles.soilLeft}>
-                            <Text style={{ fontSize: 40 }}>🌍</Text>
-                        </View>
-                        <View style={styles.soilRight}>
-                            <Text style={styles.soilTitle}>Analyze Your Soil</Text>
-                            <Text style={styles.soilDesc}>Enter your soil details to get personalized crop & fertilizer recommendations</Text>
-                            <Text style={styles.soilCta}>Get Started →</Text>
-                        </View>
-                    </TouchableOpacity>
-                </>
-            )}
-
-            {/* Farmer-only: Crop Planning */}
-            {role === 'farmer' && (
-                <>
-                    <Text style={styles.sectionTitle}>Crop Planning</Text>
-                    <View style={styles.planningRow}>
-                        <TouchableOpacity style={styles.planCard} onPress={() => router.push('/crop-recommend' as any)}>
-                            <Text style={{ fontSize: 30 }}>🌱</Text>
-                            <Text style={styles.planTitle}>What to Grow</Text>
-                            <Text style={styles.planDesc}>AI-based suggestions</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.planCard} onPress={() => router.push('/fertilizer' as any)}>
-                            <Text style={{ fontSize: 30 }}>🧪</Text>
-                            <Text style={styles.planTitle}>Fertilizer Guide</Text>
-                            <Text style={styles.planDesc}>Optimal nutrients</Text>
-                        </TouchableOpacity>
-                    </View>
-                </>
-            )}
-
-            <View style={{ height: spacing['2xl'] }} />
-
-            {/* Daily Tip Popup (auto once per day) */}
-            <DailyTipModal visible={showTip} onClose={dismissTip} tip={dailyTip} />
-
-            {/* Tip modal when tapping a tip card */}
-            <DailyTipModal
-                visible={!!tappedTip}
-                onClose={() => setTappedTip(null)}
-                tip={tappedTip}
-            />
-        </ScrollView>
+            {/* AI Chatbot FAB */}
+            <ChatFAB onPress={() => setShowChat(true)} />
+            <ChatbotModal visible={showChat} onClose={() => setShowChat(false)} />
+        </View>
     );
 }
 
@@ -181,6 +193,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.base, paddingTop: 60, paddingBottom: spacing.base,
         backgroundColor: colors.primary, borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
     },
+    translatingBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 4,
+        borderRadius: borderRadius.pill,
+    },
+    translatingText: { fontSize: 10, color: colors.accentLighter, fontWeight: '500' },
     greeting: { fontSize: typography.sizes.xl, fontWeight: '700', color: colors.textOnPrimary },
     location: { fontSize: typography.sizes.sm, color: colors.accentLighter, marginTop: 4 },
     weatherBadge: {
@@ -197,15 +219,14 @@ const styles = StyleSheet.create({
     },
     categoryLabel: { fontSize: typography.sizes.xs, color: colors.text, marginTop: 6, textAlign: 'center', fontWeight: '500' },
 
-    tipsRow: { paddingHorizontal: spacing.base, gap: spacing.md, paddingBottom: spacing.base, marginTop: spacing.lg },
+    tipsRow: { flexDirection: 'row', paddingHorizontal: spacing.base, gap: spacing.sm, marginTop: spacing.md },
     tipCard: {
-        flexDirection: 'row', alignItems: 'center',
-        paddingHorizontal: spacing.base, paddingVertical: spacing.md, borderRadius: borderRadius.lg,
-        width: 260, gap: spacing.md,
+        flex: 1, alignItems: 'center',
+        paddingHorizontal: spacing.sm, paddingVertical: spacing.md, borderRadius: borderRadius.lg,
     },
-    tipEmoji: { fontSize: 30 },
-    tipTitle: { fontSize: typography.sizes.sm, fontWeight: '600', color: colors.textOnPrimary },
-    tipText: { fontSize: typography.sizes.xs, color: colors.accentLighter, marginTop: 2 },
+    tipEmoji: { fontSize: 24, marginBottom: 4 },
+    tipTitle: { fontSize: typography.sizes.xs, fontWeight: '700', color: colors.textOnPrimary, textAlign: 'center' },
+    tipText: { fontSize: 10, color: 'rgba(255,255,255,0.8)', marginTop: 2, textAlign: 'center', lineHeight: 13 },
 
     sectionTitle: {
         fontSize: typography.sizes.lg, fontWeight: '700', color: colors.text,

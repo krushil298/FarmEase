@@ -5,7 +5,7 @@ import { colors, spacing, typography, borderRadius, shadows } from '../utils/the
 import Header from '../components/ui/Header';
 import CategoryPill from '../components/ui/CategoryPill';
 import { SCHEME_CATEGORIES } from '../utils/constants';
-import { useTranslation } from '../hooks/useTranslation';
+import { usePreloadTranslations } from '../hooks/useTranslation';
 import { fetchSchemes, Scheme } from '../services/schemes';
 
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -20,7 +20,14 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 
 export default function SchemesScreen() {
     const router = useRouter();
-    const { t } = useTranslation();
+    const { t } = usePreloadTranslations([
+        'schemes.title',
+        'schemes.subtitle',
+        'schemes.description',
+        'schemes.eligibility',
+        'schemes.deadline',
+        'schemes.checkEligibility',
+    ]);
     const [selected, setSelected] = useState('All');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [schemes, setSchemes] = useState<Scheme[]>([]);

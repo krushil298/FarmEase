@@ -9,14 +9,16 @@ import SearchBar from '../../components/ui/SearchBar';
 import CategoryPill from '../../components/ui/CategoryPill';
 import { CROP_CATEGORIES } from '../../utils/constants';
 import { useTranslation } from '../../hooks/useTranslation';
+import ChatFAB from '../../components/chat/ChatFAB';
+import ChatbotModal from '../../components/chat/ChatbotModal';
 
 const STATUSBAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44;
 
 // Featured deals for buyers
 const FEATURED_DEALS = [
-    { id: '1', name: 'Farm Fresh Tomatoes', price: 45, originalPrice: 60, unit: 'kg', seller: 'Rajesh Kumar', location: 'Nashik, MH', emoji: '🍅', discount: '25% OFF' },
-    { id: '2', name: 'Organic Basmati Rice', price: 85, originalPrice: 110, unit: 'kg', seller: 'Lakshmi Singh', location: 'Vijayawada, AP', emoji: '🍚', discount: '23% OFF' },
-    { id: '3', name: 'Fresh Alphonso Mangoes', price: 150, originalPrice: 200, unit: 'kg', seller: 'Kiran Patil', location: 'Ratnagiri, MH', emoji: '🥭', discount: '25% OFF' },
+    { id: '1', nameKey: 'marketplace.deals.tomatoes', price: 45, originalPrice: 60, unit: 'kg', seller: 'Rajesh Kumar', location: 'Nashik, MH', emoji: '🍅', discount: '25% OFF' },
+    { id: '2', nameKey: 'marketplace.deals.rice', price: 85, originalPrice: 110, unit: 'kg', seller: 'Lakshmi Singh', location: 'Vijayawada, AP', emoji: '🍚', discount: '23% OFF' },
+    { id: '3', nameKey: 'marketplace.deals.mangoes', price: 150, originalPrice: 200, unit: 'kg', seller: 'Kiran Patil', location: 'Ratnagiri, MH', emoji: '🥭', discount: '25% OFF' },
 ];
 
 
@@ -34,6 +36,7 @@ export default function BuyerHomeScreen() {
     const { t } = useTranslation();
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
+    const [showChat, setShowChat] = useState(false);
 
     const BROWSE_CATEGORIES = [
         { id: '1', name: t('buyerDashboard.vegetables'), emoji: '🥬', color: '#E8F5E9', count: '120+ items' },
@@ -50,6 +53,7 @@ export default function BuyerHomeScreen() {
     };
 
     return (
+        <View style={{ flex: 1 }}>
         <ScrollView
             style={styles.container}
             showsVerticalScrollIndicator={false}
@@ -92,7 +96,7 @@ export default function BuyerHomeScreen() {
                                 <Text style={{ fontSize: 40 }}>{deal.emoji}</Text>
                             </View>
                             <View style={styles.dealInfo}>
-                                <Text style={styles.dealName} numberOfLines={1}>{deal.name}</Text>
+                                <Text style={styles.dealName} numberOfLines={1}>{t(deal.nameKey)}</Text>
                                 <View style={styles.priceRow}>
                                     <Text style={styles.dealPrice}>{formatPrice(deal.price)}/{deal.unit}</Text>
                                     <Text style={styles.originalPrice}>₹{deal.originalPrice}</Text>
@@ -174,6 +178,11 @@ export default function BuyerHomeScreen() {
 
             <View style={{ height: spacing['3xl'] }} />
         </ScrollView>
+
+            {/* AI Chatbot FAB */}
+            <ChatFAB onPress={() => setShowChat(true)} />
+            <ChatbotModal visible={showChat} onClose={() => setShowChat(false)} />
+        </View>
     );
 }
 

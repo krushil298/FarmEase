@@ -6,7 +6,7 @@ import Header from '../components/ui/Header';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { SOIL_TYPES } from '../utils/constants';
-import { useTranslation } from '../hooks/useTranslation';
+import { usePreloadTranslations } from '../hooks/useTranslation';
 
 const SAMPLE_RESULTS = [
     { name: 'Rice', yield: '2.5 tons/hectare', season: 'Kharif', water: 'High', score: 85, emoji: '🌾' },
@@ -18,7 +18,22 @@ const SAMPLE_RESULTS = [
 
 export default function CropRecommendScreen() {
     const router = useRouter();
-    const { t } = useTranslation();
+    const { t } = usePreloadTranslations([
+        'cropRecommend.title',
+        'cropRecommend.resultsTitle',
+        'cropRecommend.formTitle',
+        'cropRecommend.soilType',
+        'cropRecommend.phLevel',
+        'cropRecommend.phPlaceholder',
+        'cropRecommend.temperature',
+        'cropRecommend.tempPlaceholder',
+        'cropRecommend.humidity',
+        'cropRecommend.humidityPlaceholder',
+        'cropRecommend.rainfall',
+        'cropRecommend.rainfallPlaceholder',
+        'cropRecommend.getRecommendations',
+        'cropRecommend.tryDifferent',
+    ]);
     const [soilType, setSoilType] = useState('Loam');
     const [ph, setPh] = useState('6.8');
     const [temp, setTemp] = useState('28');

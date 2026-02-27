@@ -6,6 +6,7 @@ import Header from '../components/ui/Header';
 import Button from '../components/ui/Button';
 import ResultCard from '../components/detection/ResultCard';
 import TreatmentCard from '../components/detection/TreatmentCard';
+import { usePreloadTranslations } from '../hooks/useTranslation';
 
 const DISEASE_DESCRIPTIONS: Record<string, string> = {
     'Early Blight': 'A common fungal disease caused by Alternaria solani. Appears as dark brown concentric rings on lower leaves, spreading upward. Can reduce yield by 20-50% if untreated.',
@@ -17,11 +18,30 @@ const DISEASE_DESCRIPTIONS: Record<string, string> = {
 
 export default function DiseaseResultScreen() {
     const router = useRouter();
+    const { t } = usePreloadTranslations([
+        'detect.resultsTitle',
+        'detect.scannedImage',
+        'detect.treatmentPlan',
+        'detect.treatmentSubtitle',
+        'detect.saveToHistory',
+        'detect.scanAgain',
+        'detect.severityHigh',
+        'detect.severityMedium',
+        'detect.severityLow',
+        'detect.unknownDisease',
+        'detect.unknownCrop',
+    ]);
     const params = useLocalSearchParams<{ imageUri: string; disease: string; confidence: string; crop: string; treatmentsJson?: string }>();
 
     const confidence = parseInt(params.confidence || '0');
-    const diseaseName = params.disease || 'Unknown Disease';
-    const severity = diseaseName === 'Healthy' ? 'Low' : (confidence >= 80 ? 'High' : confidence >= 50 ? 'Medium' : 'Low');
+    const diseaseName = params.disease || t('detect.unknownDisease');
+    const severityMap: Record<string, string> = {
+        High: t('detect.severityHigh'),
+        Medium: t('detect.severityMedium'),
+        Low: t('detect.severityLow'),
+    };
+    const rawSeverity = diseaseName === 'Healthy' ? 'Low' : (confidence >= 80 ? 'High' : confidence >= 50 ? 'Medium' : 'Low');
+    const severity = severityMap[rawSeverity];
     const description = DISEASE_DESCRIPTIONS[diseaseName] || DISEASE_DESCRIPTIONS.default;
 
     let treatments: any[] = [];
@@ -35,14 +55,14 @@ export default function DiseaseResultScreen() {
 
     return (
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-            <Header title="Scan Results" showBack onBack={() => router.back()} />
+            <Header title={t('detect.resultsTitle')} showBack onBack={() => router.back()} />
 
             {/* Scanned Image */}
             {params.imageUri && (
                 <View style={styles.imageContainer}>
                     <Image source={{ uri: params.imageUri }} style={styles.image} />
                     <View style={styles.imageOverlay}>
-                        <Text style={styles.imageLabel}>🔬 Scanned Image</Text>
+                        <Text style={styles.imageLabel}>🔬 {t('detect.scannedImage')}</Text>
                     </View>
                 </View>
             )}
@@ -50,19 +70,19 @@ export default function DiseaseResultScreen() {
             {/* Disease Result Card */}
             <View style={styles.resultSection}>
                 <ResultCard
-                    diseaseName={diseaseName}
+                    diseaseName={t(diseaseName)}
                     confidence={confidence}
-                    severity={severity}
-                    cropName={params.crop || 'Unknown'}
-                    description={description}
+                    severity={severity as 'High' | 'Medium' | 'Low'}
+                    cropName={t(params.crop || 'detect.unknownCrop')}
+                    description={t(description)}
                 />
             </View>
 
             {/* Treatment Recommendations */}
             {treatments.length > 0 && (
                 <>
-                    <Text style={styles.sectionTitle}>💊 Treatment Plan</Text>
-                    <Text style={styles.sectionSubtitle}>Follow these steps to manage the condition</Text>
+                    <Text style={styles.sectionTitle}>💊 {t('detect.treatmentPlan')}</Text>
+                    <Text style={styles.sectionSubtitle}>{t('detect.treatmentSubtitle')}</Text>
 
                     {treatments.map((treatment) => (
                         <TreatmentCard
@@ -80,8 +100,8 @@ export default function DiseaseResultScreen() {
 
             {/* Actions */}
             <View style={styles.actions}>
-                <Button title="Save to History" onPress={() => router.back()} fullWidth variant="primary" />
-                <Button title="Scan Again" onPress={() => router.back()} fullWidth variant="outline" />
+                <Button title={t('detect.saveToHistory')} onPress={() => router.back()} fullWidth variant="primary" />
+                <Button title={t('detect.scanAgain')} onPress={() => router.back()} fullWidth variant="outline" />
             </View>
         </ScrollView>
     );

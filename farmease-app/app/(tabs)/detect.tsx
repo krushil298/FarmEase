@@ -5,12 +5,22 @@ import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, typography, borderRadius } from '../../utils/theme';
 import Button from '../../components/ui/Button';
-import { useTranslation } from '../../hooks/useTranslation';
+import { usePreloadTranslations } from '../../hooks/useTranslation';
 import { analyzeCropImage } from '../../services/ml';
 
 export default function DetectScreen() {
     const router = useRouter();
-    const { t } = useTranslation();
+    const { t } = usePreloadTranslations([
+        'detect.title',
+        'detect.subtitle',
+        'detect.gallery',
+        'detect.flash',
+        'detect.retake',
+        'detect.analyze',
+        'detect.permissionTitle',
+        'detect.permissionDesc',
+        'detect.grantPermission',
+    ]);
     const [permission, requestPermission] = useCameraPermissions();
     const [capturedImage, setCapturedImage] = useState<{ uri: string; base64?: string } | null>(null);
     const [analyzing, setAnalyzing] = useState(false);

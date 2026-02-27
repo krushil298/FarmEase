@@ -5,7 +5,7 @@ import { colors, spacing, typography, borderRadius, shadows } from '../utils/the
 import Header from '../components/ui/Header';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import { useTranslation } from '../hooks/useTranslation';
+import { usePreloadTranslations } from '../hooks/useTranslation';
 
 const FERTILIZER_RESULTS = [
     { name: 'DAP (Di-ammonium Phosphate)', quantity: '50 kg/acre', schedule: 'Before sowing', emoji: '🧪' },
@@ -15,7 +15,23 @@ const FERTILIZER_RESULTS = [
 
 export default function FertilizerScreen() {
     const router = useRouter();
-    const { t } = useTranslation();
+    const { t } = usePreloadTranslations([
+        'fertilizer.title',
+        'fertilizer.resultsTitle',
+        'fertilizer.formTitle',
+        'fertilizer.nitrogenLabel',
+        'fertilizer.nitrogenPlaceholder',
+        'fertilizer.phosphorusLabel',
+        'fertilizer.phosphorusPlaceholder',
+        'fertilizer.potassiumLabel',
+        'fertilizer.potassiumPlaceholder',
+        'fertilizer.cropTypeLabel',
+        'fertilizer.cropTypePlaceholder',
+        'fertilizer.getAdvice',
+        'fertilizer.tryDifferent',
+        'fertilizer.soilSummary',
+        'fertilizer.recommended',
+    ]);
     const [nitrogen, setNitrogen] = useState('');
     const [phosphorus, setPhosphorus] = useState('');
     const [potassium, setPotassium] = useState('');

@@ -5,22 +5,33 @@ import { colors, spacing, typography, borderRadius, shadows } from '../../utils/
 import { useAuthStore } from '../../store/useAuthStore';
 import { useLanguageStore } from '../../store/useLanguageStore';
 import Button from '../../components/ui/Button';
-import { useTranslation } from '../../hooks/useTranslation';
-import type { Language } from '../../utils/i18n';
+import { usePreloadTranslations } from '../../hooks/useTranslation';
+import { ActivityIndicator } from 'react-native';
+import LanguagePicker from '../../components/ui/LanguagePicker';
+import { LanguageCode } from '../../store/useLanguageStore';
+import { getLanguageByCode } from '../../utils/languages';
 import LocationPickerModal from '../../components/LocationPickerModal';
 import { LocationCoords } from '../../services/location';
 import { upsertProfile } from '../../services/auth';
-
-const LANGUAGES: { code: Language; label: string; flag: string }[] = [
-    { code: 'en', label: 'English', flag: '🇬🇧' },
-    { code: 'hi', label: 'हिंदी', flag: '🇮🇳' },
-];
 
 export default function ProfileScreen() {
     const router = useRouter();
     const { user, role, logout, setUser } = useAuthStore();
     const { language, setLanguage } = useLanguageStore();
-    const { t } = useTranslation();
+    const { t, isTranslating } = usePreloadTranslations([
+        'profile.title',
+        'profile.farmer',
+        'profile.buyer',
+        'profile.myOrders',
+        'profile.diseaseHistory',
+        'profile.myListings',
+        'profile.savedSchemes',
+        'profile.language',
+        'profile.helpSupport',
+        'profile.about',
+        'profile.signOut',
+        'common.version',
+    ]);
     const [showLangModal, setShowLangModal] = useState(false);
     const [showMapPicker, setShowMapPicker] = useState(false);
     const [updatingLocation, setUpdatingLocation] = useState(false);
@@ -46,12 +57,20 @@ export default function ProfileScreen() {
         }
     };
 
+    const currentLang = getLanguageByCode(language);
+
     const menuItems = [
         { title: t('profile.myOrders'), emoji: '📦', route: '', action: undefined },
         { title: t('profile.diseaseHistory'), emoji: '🔬', route: '', action: undefined },
         { title: t('profile.myListings'), emoji: '📋', route: '', farmerOnly: true, action: undefined },
         { title: t('profile.savedSchemes'), emoji: '⭐', route: '', action: undefined },
-        { title: t('profile.language'), emoji: '🌐', route: '', action: () => setShowLangModal(true), badge: LANGUAGES.find(l => l.code === language)?.label },
+        {
+            title: t('profile.language'),
+            emoji: '🌐',
+            route: '',
+            action: () => setShowLangModal(true),
+            badge: currentLang.nativeName
+        },
         { title: t('profile.helpSupport'), emoji: '❓', route: '', action: undefined },
         { title: t('profile.about'), emoji: 'ℹ️', route: '', action: undefined },
     ];
@@ -60,12 +79,18 @@ export default function ProfileScreen() {
         <ScrollView style={styles.container}>
             {/* Profile Header */}
             <View style={styles.header}>
+                {isTranslating && (
+                    <View style={styles.translatingBadge}>
+                        <ActivityIndicator size="small" color="#fff" />
+                        <Text style={styles.translatingText}>Translating...</Text>
+                    </View>
+                )}
                 <View style={styles.avatar}>
                     <Text style={{ fontSize: 40 }}>{role === 'farmer' ? '👨‍🌾' : '🛒'}</Text>
                 </View>
-                <Text style={styles.name}>{user?.name || 'User'}</Text>
+                <Text style={styles.name}>{user?.name || t('common.user')}</Text>
                 <Text style={styles.role}>{role === 'farmer' ? t('profile.farmer') : t('profile.buyer')}</Text>
-                <Text style={styles.phone}>📱 {user?.phone || 'Not set'}</Text>
+                <Text style={styles.phone}>📱 {user?.phone || t('common.notSet')}</Text>
 
                 <TouchableOpacity
                     style={styles.locationContainer}
@@ -110,37 +135,16 @@ export default function ProfileScreen() {
 
             <Text style={styles.version}>{t('common.version')}</Text>
 
-            {/* Language Selection Modal */}
-            <Modal visible={showLangModal} transparent animationType="fade" onRequestClose={() => setShowLangModal(false)}>
-                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowLangModal(false)}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>{t('common.selectLanguage')}</Text>
-                        {LANGUAGES.map((lang) => (
-                            <TouchableOpacity
-                                key={lang.code}
-                                style={[styles.langOption, language === lang.code && styles.langOptionActive]}
-                                onPress={() => {
-                                    setLanguage(lang.code);
-                                    setShowLangModal(false);
-                                }}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={styles.langFlag}>{lang.flag}</Text>
-                                <Text style={[styles.langLabel, language === lang.code && styles.langLabelActive]}>{lang.label}</Text>
-                                {language === lang.code && <Text style={styles.langCheck}>✓</Text>}
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </TouchableOpacity>
-            </Modal>
+            <LanguagePicker
+                visible={showLangModal}
+                onClose={() => setShowLangModal(false)}
+            />
 
             {/* Location Picker Modal */}
             <LocationPickerModal
                 visible={showMapPicker}
                 onClose={() => setShowMapPicker(false)}
                 onConfirm={handleLocationConfirm}
-            // We're not storing lat/lng in user profile currently, just Address
-            // If we had them, pass initialCoords here
             />
         </ScrollView>
     );
@@ -203,4 +207,10 @@ const styles = StyleSheet.create({
     langLabel: { flex: 1, fontSize: typography.sizes.base, fontWeight: '500', color: colors.text },
     langLabelActive: { color: colors.primary, fontWeight: '700' },
     langCheck: { fontSize: typography.sizes.lg, color: colors.primary, fontWeight: '700' },
+    translatingBadge: {
+        flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: borderRadius.pill,
+        marginBottom: spacing.md, gap: spacing.sm,
+    },
+    translatingText: { fontSize: typography.sizes.xs, color: '#fff', fontWeight: '600' },
 });

@@ -1,31 +1,46 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Language } from '../utils/i18n';
+import { Platform } from 'react-native';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
-const LANGUAGE_KEY = 'farmease_language';
+export type LanguageCode = 'en' | 'hi' | 'ta' | 'te' | 'kn' | 'mr' | 'bn' | 'gu' | 'pa' | 'ml' | 'or';
 
 interface LanguageState {
-    language: Language;
-    setLanguage: (lang: Language) => Promise<void>;
-    initialize: () => Promise<void>;
+    language: LanguageCode;
+    setLanguage: (lang: LanguageCode) => void;
 }
 
-export const useLanguageStore = create<LanguageState>((set) => ({
-    language: 'en',
+// Platform-aware storage: localStorage on web, AsyncStorage on native
+const platformStorage =
+    Platform.OS === 'web'
+        ? {
+            getItem: (key: string) => Promise.resolve(localStorage.getItem(key)),
+            setItem: (key: string, value: string) => { localStorage.setItem(key, value); return Promise.resolve(); },
+            removeItem: (key: string) => { localStorage.removeItem(key); return Promise.resolve(); },
+        }
+        : {
+            getItem: async (key: string) => {
+                const AS = (await import('@react-native-async-storage/async-storage')).default;
+                return AS.getItem(key);
+            },
+            setItem: async (key: string, value: string) => {
+                const AS = (await import('@react-native-async-storage/async-storage')).default;
+                return AS.setItem(key, value);
+            },
+            removeItem: async (key: string) => {
+                const AS = (await import('@react-native-async-storage/async-storage')).default;
+                return AS.removeItem(key);
+            },
+        };
 
-    setLanguage: async (lang: Language) => {
-        set({ language: lang });
-        try {
-            await AsyncStorage.setItem(LANGUAGE_KEY, lang);
-        } catch {}
-    },
-
-    initialize: async () => {
-        try {
-            const saved = await AsyncStorage.getItem(LANGUAGE_KEY);
-            if (saved === 'en' || saved === 'hi') {
-                set({ language: saved });
-            }
-        } catch {}
-    },
-}));
+export const useLanguageStore = create<LanguageState>()(
+    persist(
+        (set) => ({
+            language: 'en',
+            setLanguage: (lang) => set({ language: lang }),
+        }),
+        {
+            name: 'farmease-language',
+            storage: createJSONStorage(() => platformStorage),
+        }
+    )
+);
