@@ -7,6 +7,9 @@ import { useLanguageStore } from '../../store/useLanguageStore';
 import Button from '../../components/ui/Button';
 import { useTranslation } from '../../hooks/useTranslation';
 import type { Language } from '../../utils/i18n';
+import LocationPickerModal from '../../components/LocationPickerModal';
+import { LocationCoords } from '../../services/location';
+import { upsertProfile } from '../../services/auth';
 
 const LANGUAGES: { code: Language; label: string; flag: string }[] = [
     { code: 'en', label: 'English', flag: '🇬🇧' },
@@ -15,10 +18,33 @@ const LANGUAGES: { code: Language; label: string; flag: string }[] = [
 
 export default function ProfileScreen() {
     const router = useRouter();
-    const { user, role, logout } = useAuthStore();
+    const { user, role, logout, setUser } = useAuthStore();
     const { language, setLanguage } = useLanguageStore();
     const { t } = useTranslation();
     const [showLangModal, setShowLangModal] = useState(false);
+    const [showMapPicker, setShowMapPicker] = useState(false);
+    const [updatingLocation, setUpdatingLocation] = useState(false);
+
+    const handleLocationConfirm = async (coords: LocationCoords, address: string) => {
+        if (!user) return;
+        setUpdatingLocation(true);
+        try {
+            const updatedProfile = await upsertProfile({
+                id: user.id,
+                phone: user.phone || '',
+                name: user.name || '',
+                role: user.role,
+                farm_location: address,
+                // keep existing values if needed, assuming upsert merges or we need full object
+            });
+            setUser(updatedProfile);
+            setShowMapPicker(false);
+        } catch (error) {
+            console.error('Failed to update location', error);
+        } finally {
+            setUpdatingLocation(false);
+        }
+    };
 
     const menuItems = [
         { title: t('profile.myOrders'), emoji: '📦', route: '', action: undefined },
@@ -40,7 +66,15 @@ export default function ProfileScreen() {
                 <Text style={styles.name}>{user?.name || 'User'}</Text>
                 <Text style={styles.role}>{role === 'farmer' ? t('profile.farmer') : t('profile.buyer')}</Text>
                 <Text style={styles.phone}>📱 {user?.phone || 'Not set'}</Text>
-                {user?.farm_location && <Text style={styles.location}>📍 {user.farm_location}</Text>}
+
+                <TouchableOpacity
+                    style={styles.locationContainer}
+                    onPress={() => setShowMapPicker(true)}
+                    activeOpacity={0.7}
+                >
+                    <Text style={styles.location}>📍 {user?.farm_location || 'Tap to add location'}</Text>
+                    <Text style={styles.editIcon}>✎</Text>
+                </TouchableOpacity>
             </View>
 
             {/* Menu Items */}
@@ -99,6 +133,15 @@ export default function ProfileScreen() {
                     </View>
                 </TouchableOpacity>
             </Modal>
+
+            {/* Location Picker Modal */}
+            <LocationPickerModal
+                visible={showMapPicker}
+                onClose={() => setShowMapPicker(false)}
+                onConfirm={handleLocationConfirm}
+            // We're not storing lat/lng in user profile currently, just Address
+            // If we had them, pass initialCoords here
+            />
         </ScrollView>
     );
 }
@@ -113,7 +156,13 @@ const styles = StyleSheet.create({
     name: { fontSize: typography.sizes.xl, fontWeight: '700', color: colors.textOnPrimary, marginTop: spacing.md },
     role: { fontSize: typography.sizes.sm, color: colors.accentLighter, fontWeight: '500', textTransform: 'capitalize' },
     phone: { fontSize: typography.sizes.sm, color: colors.accentLighter, marginTop: spacing.xs },
-    location: { fontSize: typography.sizes.sm, color: colors.accentLighter, marginTop: 2 },
+    locationContainer: {
+        flexDirection: 'row', alignItems: 'center', marginTop: 8,
+        backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: spacing.md,
+        paddingVertical: 6, borderRadius: borderRadius.full
+    },
+    location: { fontSize: typography.sizes.sm, color: colors.textOnPrimary, fontWeight: '500' },
+    editIcon: { fontSize: 14, color: colors.textOnPrimary, marginLeft: 6, opacity: 0.8 },
     menu: { marginTop: spacing.lg, marginHorizontal: spacing.base },
     menuItem: {
         flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,

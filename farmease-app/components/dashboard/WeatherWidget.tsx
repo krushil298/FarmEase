@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { colors, borderRadius, spacing, typography, shadows } from '../../utils/theme';
-import { WEATHER_API_KEY, WEATHER_BASE_URL } from '../../utils/constants';
+import { FASTAPI_BASE_URL } from '../../utils/constants';
 import { getCurrentLocation } from '../../services/location';
 import { useFarmStore } from '../../store/useFarmStore';
+import { requestNotificationPermissions, evaluateWeatherAndNotify } from '../../services/notifications';
 
 interface WeatherData {
     temp: number;
@@ -34,7 +35,7 @@ const MOCK_WEATHER: WeatherData = {
     icon: '🌤️',
     humidity: 65,
     windSpeed: 12,
-    location: 'Bangalore, KA',
+    location: 'Bangalore, IN',
     feelsLike: 30,
 };
 
@@ -44,7 +45,8 @@ export default function WeatherWidget() {
     const { setLocation, setAddress } = useFarmStore();
 
     useEffect(() => {
-        fetchWeather();
+        // Init permissions and fetch real weather
+        requestNotificationPermissions().then(() => fetchWeather());
     }, []);
 
     const fetchWeather = async () => {
@@ -57,28 +59,32 @@ export default function WeatherWidget() {
             setLocation({ lat, lng });
             setAddress(loc.address);
 
-            // Use demo data if API key is placeholder
-            if (WEATHER_API_KEY === 'your-openweathermap-api-key') {
-                setWeather({ ...MOCK_WEATHER, location: loc.address });
-                setLoading(false);
-                return;
-            }
+            const url = `${FASTAPI_BASE_URL}/api/weather?lat=${lat}&lon=${lng}&units=metric`;
+            console.log(`[WeatherWidget] Fetching real weather from: ${url}`);
 
-            const response = await fetch(
-                `${WEATHER_BASE_URL}/weather?lat=${lat}&lon=${lng}&appid=${WEATHER_API_KEY}&units=metric`
-            );
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Proxy failed: ${response.status} ${errText}`);
+            }
             const data = await response.json();
 
             setWeather({
-                temp: Math.round(data.main.temp),
-                condition: data.weather[0].main,
-                icon: WEATHER_ICONS[data.weather[0].main] || WEATHER_ICONS.default,
-                humidity: data.main.humidity,
-                windSpeed: Math.round(data.wind.speed),
-                location: `${data.name}, ${data.sys.country}`,
-                feelsLike: Math.round(data.main.feels_like),
+                temp: Math.round(data.current.temp),
+                condition: data.current.condition || 'Clear',
+                icon: WEATHER_ICONS[data.current.condition] || WEATHER_ICONS.default,
+                humidity: Math.round(data.current.humidity),
+                windSpeed: Math.round(data.current.wind_speed),
+                location: `${data.location.city}, ${data.location.country}`,
+                feelsLike: Math.round(data.current.feels_like),
             });
-        } catch {
+
+            // Push notification checks based on backend data
+            evaluateWeatherAndNotify(data);
+        } catch (e: any) {
+            console.error('[WeatherWidget] Weather fetch failed. Error:', e.message || e);
+            console.warn('Weather fetch failed, utilizing mock.');
             setWeather(MOCK_WEATHER);
         } finally {
             setLoading(false);
@@ -140,7 +146,7 @@ const styles = StyleSheet.create({
         marginVertical: spacing.sm,
         borderRadius: borderRadius.xl,
         padding: spacing.base,
-        backgroundColor: '#4A90D9',
+        backgroundColor: '#4A90D9', // Deep sky blue
         ...shadows.lg,
     },
     loadingContainer: {

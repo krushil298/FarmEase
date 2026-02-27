@@ -14,6 +14,8 @@ import Button from '../ui/Button';
 import { colors, borderRadius, spacing, typography, shadows } from '../../utils/theme';
 import { CROP_CATEGORIES } from '../../utils/constants';
 import { CreateProductInput } from '../../services/marketplace';
+import LocationPickerModal from '../LocationPickerModal';
+import { LocationCoords } from '../../services/location';
 
 const UNITS = ['kg', 'quintal', 'dozen', 'piece', 'litre', 'ton'] as const;
 
@@ -37,7 +39,9 @@ export default function ProductForm({
     const [quantity, setQuantity] = useState(initialValues?.quantity?.toString() || '');
     const [unit, setUnit] = useState(initialValues?.unit || 'kg');
     const [location, setLocation] = useState(initialValues?.location || '');
+    const [locationCoords, setLocationCoords] = useState<LocationCoords | null>(null);
     const [imageUri, setImageUri] = useState(initialValues?.image_url || '');
+    const [showMapPicker, setShowMapPicker] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const validate = (): boolean => {
@@ -186,11 +190,38 @@ export default function ProductForm({
 
             {/* Product Location */}
             <Text style={styles.sectionTitle}>Location</Text>
-            <Input
-                label="Product Location"
-                placeholder="e.g. Pune, Maharashtra"
-                value={location}
-                onChangeText={setLocation}
+            <TouchableOpacity
+                style={styles.locationButton}
+                onPress={() => setShowMapPicker(true)}
+                activeOpacity={0.7}
+            >
+                <Text style={styles.locationIcon}>📍</Text>
+                <Text
+                    style={[
+                        styles.locationText,
+                        !location && styles.locationPlaceholder,
+                    ]}
+                    numberOfLines={1}
+                >
+                    {location || 'Tap to pick location on map'}
+                </Text>
+                <Text style={styles.locationArrow}>→</Text>
+            </TouchableOpacity>
+            {locationCoords && (
+                <Text style={styles.coordsHint}>
+                    {locationCoords.lat.toFixed(4)}°N, {locationCoords.lng.toFixed(4)}°E
+                </Text>
+            )}
+
+            <LocationPickerModal
+                visible={showMapPicker}
+                onClose={() => setShowMapPicker(false)}
+                onConfirm={(coords, address) => {
+                    setLocationCoords(coords);
+                    setLocation(address);
+                    setShowMapPicker(false);
+                }}
+                initialCoords={locationCoords}
             />
 
             {/* Submit */}
@@ -289,6 +320,41 @@ const styles = StyleSheet.create({
         color: colors.text,
         marginTop: spacing.lg,
         marginBottom: spacing.md,
+    },
+    locationButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: borderRadius.lg,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.md + 2,
+        gap: spacing.sm,
+    },
+    locationIcon: {
+        fontSize: 18,
+    },
+    locationText: {
+        flex: 1,
+        fontSize: typography.sizes.base,
+        color: colors.text,
+        fontWeight: '500',
+    },
+    locationPlaceholder: {
+        color: colors.textLight,
+        fontWeight: '400',
+    },
+    locationArrow: {
+        fontSize: 16,
+        color: colors.primary,
+        fontWeight: '700',
+    },
+    coordsHint: {
+        fontSize: typography.sizes.xs,
+        color: colors.textLight,
+        marginTop: 4,
+        marginLeft: spacing.xs,
     },
     submitButton: {
         marginTop: spacing.xl,
