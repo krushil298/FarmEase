@@ -28,6 +28,7 @@ function getBackendUrl(): string {
 }
 
 const BASE_URL = getBackendUrl();
+const API_KEY = process.env.EXPO_PUBLIC_API_KEY || '';
 console.log('[ChatAPI] Backend URL:', BASE_URL);
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -53,7 +54,7 @@ export async function sendChatMessage(
 
         const resp = await fetch(`${BASE_URL}/chat`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
             body: JSON.stringify({
                 message,
                 history: history.slice(-10),
@@ -81,7 +82,7 @@ export async function speakText(text: string, language: string = 'en'): Promise<
     try {
         const resp = await fetch(`${BASE_URL}/speak`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
             body: JSON.stringify({ text, language }),
         });
 
@@ -105,7 +106,7 @@ export async function transcribeAudio(audioUri: string): Promise<string> {
         const resp = await fetch(`${BASE_URL}/transcribe`, {
             method: 'POST',
             body: formData,
-            headers: { 'Content-Type': 'multipart/form-data' },
+            headers: { 'Content-Type': 'multipart/form-data', 'X-API-Key': API_KEY },
         });
 
         if (!resp.ok) {
