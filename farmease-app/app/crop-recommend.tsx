@@ -7,14 +7,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { SOIL_TYPES } from '../utils/constants';
 import { usePreloadTranslations } from '../hooks/useTranslation';
-
-const SAMPLE_RESULTS = [
-    { name: 'Rice', yield: '2.5 tons/hectare', season: 'Kharif', water: 'High', score: 85, emoji: '🌾' },
-    { name: 'Wheat', yield: '2.1 tons/hectare', season: 'Rabi', water: 'Medium', score: 82, emoji: '🌾' },
-    { name: 'Cotton', yield: '1.8 tons/hectare', season: 'Kharif', water: 'Medium', score: 78, emoji: '🧵' },
-    { name: 'Maize', yield: '2.5 tons/hectare', season: 'Kharif', water: 'High', score: 75, emoji: '🌽' },
-    { name: 'Sugarcane', yield: '3.0 tons/hectare', season: 'Annual', water: 'Very High', score: 72, emoji: '🎋' },
-];
+import { recommendCrops, CropResult } from '../services/cropRecommendation';
 
 export default function CropRecommendScreen() {
     const router = useRouter();
@@ -39,30 +32,41 @@ export default function CropRecommendScreen() {
     const [temp, setTemp] = useState('28');
     const [humidity, setHumidity] = useState('70');
     const [rainfall, setRainfall] = useState('1200');
+    const [results, setResults] = useState<CropResult[]>([]);
     const [showResults, setShowResults] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const handleRecommend = () => {
         setLoading(true);
+        // Small delay to show loading spinner (UX feedback)
         setTimeout(() => {
+            const recommendations = recommendCrops({
+                soilType,
+                ph: parseFloat(ph) || 6.8,
+                temperature: parseFloat(temp) || 28,
+                humidity: parseFloat(humidity) || 70,
+                rainfall: parseFloat(rainfall) || 1200,
+            });
+            setResults(recommendations);
             setLoading(false);
             setShowResults(true);
-        }, 1500);
+        }, 800);
     };
 
     if (showResults) {
         return (
             <ScrollView style={styles.container}>
                 <Header title={t('cropRecommend.resultsTitle')} showBack onBack={() => setShowResults(false)} />
-                {SAMPLE_RESULTS.map((crop, i) => (
+                {results.map((crop, i) => (
                     <View key={i} style={styles.resultCard}>
                         <Text style={{ fontSize: 36 }}>{crop.emoji}</Text>
                         <View style={styles.resultInfo}>
                             <Text style={styles.resultName}>{crop.name}</Text>
                             <Text style={styles.resultMeta}>{crop.yield} • {crop.season}</Text>
                             <Text style={styles.resultMeta}>💧 {crop.water}</Text>
+                            <Text style={styles.matchText}>{crop.matchDetails}</Text>
                         </View>
-                        <View style={styles.scoreBadge}>
+                        <View style={[styles.scoreBadge, crop.score >= 70 ? styles.scoreHigh : crop.score >= 40 ? styles.scoreMed : styles.scoreLow]}>
                             <Text style={styles.scoreText}>{crop.score}%</Text>
                         </View>
                     </View>
@@ -127,4 +131,8 @@ const styles = StyleSheet.create({
     resultMeta: { fontSize: typography.sizes.sm, color: colors.textSecondary, marginTop: 2 },
     scoreBadge: { backgroundColor: colors.accentLighter, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.pill },
     scoreText: { fontSize: typography.sizes.base, fontWeight: '700', color: colors.primary },
+    matchText: { fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: 4, lineHeight: 16 },
+    scoreHigh: { backgroundColor: '#D4EDDA' },
+    scoreMed: { backgroundColor: '#FFF3CD' },
+    scoreLow: { backgroundColor: '#F8D7DA' },
 });
