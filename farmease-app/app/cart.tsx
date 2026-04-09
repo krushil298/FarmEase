@@ -18,7 +18,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { placeOrder } from '../services/orders';
 import { colors, borderRadius, spacing, typography, shadows } from '../utils/theme';
 import { useTranslation } from '../hooks/useTranslation';
-import LocationPickerModal from '../components/LocationPickerModal';
+import LocationPickerModal from '../components/location/LocationPickerModal';
 import { LocationCoords } from '../services/location';
 
 const DELIVERY_FEE = 49;

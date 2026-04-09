@@ -14,7 +14,7 @@ import Button from '../ui/Button';
 import { colors, borderRadius, spacing, typography, shadows } from '../../utils/theme';
 import { CROP_CATEGORIES } from '../../utils/constants';
 import { CreateProductInput } from '../../services/marketplace';
-import LocationPickerModal from '../LocationPickerModal';
+import LocationPickerModal from '../location/LocationPickerModal';
 import { LocationCoords } from '../../services/location';
 
 const UNITS = ['kg', 'quintal', 'dozen', 'piece', 'litre', 'ton'] as const;

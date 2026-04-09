@@ -8,7 +8,7 @@ import Header from '../../components/ui/Header';
 import { useAuthStore } from '../../store/useAuthStore';
 import { upsertProfile } from '../../services/auth';
 import { SOIL_TYPES } from '../../utils/constants';
-import LocationPickerModal from '../../components/LocationPickerModal';
+import LocationPickerModal from '../../components/location/LocationPickerModal';
 import type { LocationCoords } from '../../services/location';
 
 export default function RegisterFarmerScreen() {

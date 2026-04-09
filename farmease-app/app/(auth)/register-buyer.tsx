@@ -8,7 +8,7 @@ import Header from '../../components/ui/Header';
 import { useAuthStore } from '../../store/useAuthStore';
 import { upsertProfile } from '../../services/auth';
 import { useTranslation } from '../../hooks/useTranslation';
-import LocationPickerModal from '../../components/LocationPickerModal';
+import LocationPickerModal from '../../components/location/LocationPickerModal';
 import type { LocationCoords } from '../../services/location';
 
 export default function RegisterBuyerScreen() {

@@ -10,7 +10,7 @@ import { ActivityIndicator } from 'react-native';
 import LanguagePicker from '../../components/ui/LanguagePicker';
 import { LanguageCode } from '../../store/useLanguageStore';
 import { getLanguageByCode } from '../../utils/languages';
-import LocationPickerModal from '../../components/LocationPickerModal';
+import LocationPickerModal from '../../components/location/LocationPickerModal';
 import { LocationCoords } from '../../services/location';
 import { upsertProfile } from '../../services/auth';
 import { fetchFarmerRevenue } from '../../services/orders';

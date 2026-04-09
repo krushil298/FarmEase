@@ -12,7 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import { colors, borderRadius, spacing, typography, shadows } from '../../utils/theme';
-import LocationPickerModal from '../LocationPickerModal';
+import LocationPickerModal from '../location/LocationPickerModal';
 import { LocationCoords } from '../../services/location';
 
 export interface CreateRentalInput {
