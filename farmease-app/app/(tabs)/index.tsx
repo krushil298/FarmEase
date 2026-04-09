@@ -125,7 +125,7 @@ export default function DashboardScreen() {
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
             >
                 {/* Greeting + Weather */}
-                <View style={styles.greetingSection}>
+                <View style={[styles.greetingSection, { paddingBottom: role === 'farmer' ? spacing.xl : spacing.base }]}>
                     <View style={{ flex: 1 }}>
                         <Text style={styles.greeting}>{t(getGreeting())}, {user?.name || (role === 'farmer' ? t('profile.farmer') : t('profile.buyer'))}!</Text>
                         <Text style={styles.location}>📍 {detectedAddress || user?.farm_location || t('dashboard.setLocation')}</Text>
@@ -205,6 +205,27 @@ const styles = StyleSheet.create({
     translatingText: { fontSize: 10, color: colors.accentLighter, fontWeight: '500' },
     greeting: { fontSize: typography.sizes.xl, fontWeight: '700', color: colors.textOnPrimary },
     location: { fontSize: typography.sizes.sm, color: colors.accentLighter, marginTop: 4 },
+    revenueContainer: {
+        marginTop: spacing.md,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        alignSelf: 'flex-start',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: borderRadius.lg,
+    },
+    revenueLabel: {
+        fontSize: typography.sizes.xs,
+        color: colors.accentLighter,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        fontWeight: '600',
+    },
+    revenueValue: {
+        fontSize: typography.sizes.xl,
+        fontWeight: 'bold',
+        color: colors.textOnPrimary,
+        marginTop: 2,
+    },
     weatherBadge: {
         backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm, borderRadius: borderRadius.pill,

@@ -1,21 +1,33 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, ActivityIndicator, Image, RefreshControl } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, ActivityIndicator, Image, RefreshControl, Alert } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { colors, spacing, typography, borderRadius, shadows } from '../../utils/theme';
 import SearchBar from '../../components/ui/SearchBar';
 import CategoryPill from '../../components/ui/CategoryPill';
+import RadiusPill, { RadiusOption } from '../../components/ui/RadiusPill';
 import { CROP_CATEGORIES } from '../../utils/constants';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useCartStore } from '../../store/useCartStore';
 import { formatPrice } from '../../utils/helpers';
 import { fetchProducts, Product } from '../../services/marketplace';
 import MarketplaceLoader from '../../components/ui/MarketplaceLoader';
 import { usePreloadTranslations } from '../../hooks/useTranslation';
+import { haversineDistance, formatDistance } from '../../utils/distance';
 
 const STATUSBAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44;
 
+const RADIUS_OPTIONS: RadiusOption[] = [
+    { label: 'Anywhere', value: null },
+    { label: '< 10 km', value: 10 },
+    { label: '< 25 km', value: 25 },
+    { label: '< 50 km', value: 50 },
+    { label: '< 100 km', value: 100 },
+];
+
 export default function MarketplaceScreen() {
     const router = useRouter();
-    const { role } = useAuthStore();
+    const { role, user } = useAuthStore();
+    const { addItem, getItemCount } = useCartStore();
     const { t } = usePreloadTranslations([
         'marketplace.title',
         'marketplace.mandiTitle',
@@ -26,10 +38,28 @@ export default function MarketplaceScreen() {
     ]);
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
+    const [radius, setRadius] = useState<number | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const cartCount = getItemCount();
+
+    const handleRadiusSelect = (val: number | null) => {
+        if (val !== null && (!user?.lat || !user?.lng)) {
+            Alert.alert(
+                'Location Required',
+                'Please update your profile field "Farm/Home Location" using the map to use the radius filter.',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Update Profile', onPress: () => router.push('/profile') }
+                ]
+            );
+            return;
+        }
+        setRadius(val);
+    };
 
     const loadProducts = useCallback(async (isRefresh = false) => {
         try {
@@ -39,6 +69,10 @@ export default function MarketplaceScreen() {
             const data = await fetchProducts({
                 category: selectedCategory,
                 search: search.trim() || undefined,
+                includeSold: true, // Show sold products with SOLD badge
+                radiusKm: radius || undefined,
+                userLat: user?.lat,
+                userLng: user?.lng,
             });
 
             setProducts(data);
@@ -49,28 +83,77 @@ export default function MarketplaceScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [selectedCategory, search]);
+    }, [selectedCategory, search, radius, user?.lat, user?.lng]);
 
     // Fetch products on mount and filter changes
     useEffect(() => {
         loadProducts();
     }, [loadProducts]);
 
+    // Re-fetch when screen comes back into focus (e.g., after checkout)
+    useFocusEffect(
+        useCallback(() => {
+            loadProducts(true);
+        }, [loadProducts])
+    );
+
     const onRefresh = useCallback(() => {
         setRefreshing(true);
         loadProducts(true);
     }, [loadProducts]);
+
+    const handleAddToCart = (product: Product) => {
+        if (!product.is_available || product.quantity <= 0) {
+            Alert.alert('Sold Out', 'This product is no longer available.');
+            return;
+        }
+        addItem({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: 1,
+            unit: product.unit,
+            image_url: product.image_url,
+            seller_name: product.seller_name,
+            seller_id: product.seller_id,
+        });
+        Alert.alert('Added! ✓', `${product.name} added to cart`, [
+            { text: 'Continue', style: 'cancel' },
+            { text: 'View Cart', onPress: () => router.push('/cart') },
+        ]);
+    };
+
+    const isSoldOut = (product: Product) => !product.is_available || product.quantity <= 0;
+
+    const getDistanceText = (product: Product): string | null => {
+        if (user?.lat && user?.lng && product.lat && product.lng) {
+            const km = haversineDistance(user.lat, user.lng, product.lat, product.lng);
+            return formatDistance(km);
+        }
+        return null;
+    };
 
     return (
         <View style={styles.container}>
             {/* Fixed Header */}
             <View style={styles.header}>
                 <Text style={styles.title}>Marketplace</Text>
-                {role === 'farmer' && (
-                    <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/add-product' as any)}>
-                        <Text style={styles.addBtnText}>+ List Crop</Text>
+                <View style={styles.headerRight}>
+                    {/* Cart Button */}
+                    <TouchableOpacity style={styles.cartHeaderBtn} onPress={() => router.push('/cart')}>
+                        <Text style={styles.cartHeaderIcon}>🛒</Text>
+                        {cartCount > 0 && (
+                            <View style={styles.cartBadge}>
+                                <Text style={styles.cartBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
-                )}
+                    {role === 'farmer' && (
+                        <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/add-product' as any)}>
+                            <Text style={styles.addBtnText}>+ List Crop</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
 
             {/* Scrollable Content */}
@@ -83,6 +166,7 @@ export default function MarketplaceScreen() {
             >
                 <SearchBar value={search} onChangeText={setSearch} onFilterPress={() => { }} />
                 <CategoryPill categories={CROP_CATEGORIES} selected={selectedCategory} onSelect={setSelectedCategory} />
+                <RadiusPill options={RADIUS_OPTIONS} selectedValue={radius} onSelect={handleRadiusSelect} />
 
                 {/* Mandi Prices Banner */}
                 <TouchableOpacity style={styles.mandiBanner}>
@@ -125,38 +209,64 @@ export default function MarketplaceScreen() {
                 {/* Product Grid */}
                 {!loading && !error && products.length > 0 && (
                     <View style={styles.productGrid}>
-                        {products.map((product) => (
-                            <TouchableOpacity
-                                key={product.id}
-                                style={styles.productCard}
-                                onPress={() => router.push({ pathname: '/product-detail', params: { id: product.id } } as any)}
-                                activeOpacity={0.8}
-                            >
-                                <View style={styles.productImageBox}>
-                                    {product.image_url ? (
-                                        <Image
-                                            source={{ uri: product.image_url }}
-                                            style={styles.productImage}
-                                            resizeMode="cover"
-                                        />
-                                    ) : (
-                                        <Text style={{ fontSize: 40 }}>🌾</Text>
-                                    )}
-                                    <View style={styles.categoryBadge}>
-                                        <Text style={styles.categoryBadgeText}>{product.category}</Text>
+                        {products.map((product) => {
+                            const soldOut = isSoldOut(product);
+                            return (
+                                <TouchableOpacity
+                                    key={product.id}
+                                    style={[styles.productCard, soldOut && styles.productCardSold]}
+                                    onPress={() => router.push({ pathname: '/product-detail', params: { id: product.id } } as any)}
+                                    activeOpacity={0.8}
+                                >
+                                    <View style={styles.productImageBox}>
+                                        {product.image_url ? (
+                                            <Image
+                                                source={{ uri: product.image_url }}
+                                                style={[styles.productImage, soldOut && styles.soldImage]}
+                                                resizeMode="cover"
+                                            />
+                                        ) : (
+                                            <Text style={{ fontSize: 40 }}>🌾</Text>
+                                        )}
+                                        <View style={styles.categoryBadge}>
+                                            <Text style={styles.categoryBadgeText}>{product.category}</Text>
+                                        </View>
+
+                                        {/* SOLD Overlay */}
+                                        {soldOut && (
+                                            <View style={styles.soldOverlay}>
+                                                <View style={styles.soldBanner}>
+                                                    <Text style={styles.soldBannerText}>SOLD</Text>
+                                                </View>
+                                            </View>
+                                        )}
                                     </View>
-                                </View>
-                                <View style={styles.productInfo}>
-                                    <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-                                    <Text style={styles.productPrice}>{formatPrice(product.price)}/{product.unit}</Text>
-                                    <Text style={styles.productSeller} numberOfLines={1}>🧑‍🌾 {product.seller_name}</Text>
-                                    <Text style={styles.productLocation} numberOfLines={1}>📍 {product.location || product.seller_location || 'India'}</Text>
-                                </View>
-                                <TouchableOpacity style={styles.cartBtn}>
-                                    <Text style={styles.cartBtnText}>Add to Cart</Text>
+                                    <View style={styles.productInfo}>
+                                        <Text style={[styles.productName, soldOut && styles.soldText]} numberOfLines={1}>{product.name}</Text>
+                                        <Text style={[styles.productPrice, soldOut && styles.soldText]}>{formatPrice(product.price)}/{product.unit}</Text>
+                                        <Text style={styles.productSeller} numberOfLines={1}>🧑‍🌾 {product.seller_name}</Text>
+                                        {getDistanceText(product) && (
+                                            <Text style={styles.productLocation} numberOfLines={1}>📍 {getDistanceText(product)} away</Text>
+                                        )}
+                                    </View>
+                                    {soldOut ? (
+                                        <View style={[styles.cartBtn, styles.soldCartBtn]}>
+                                            <Text style={[styles.cartBtnText, styles.soldCartBtnText]}>Sold Out</Text>
+                                        </View>
+                                    ) : (
+                                        <TouchableOpacity
+                                            style={styles.cartBtn}
+                                            onPress={(e) => {
+                                                e.stopPropagation();
+                                                handleAddToCart(product);
+                                            }}
+                                        >
+                                            <Text style={styles.cartBtnText}>Add to Cart</Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </TouchableOpacity>
-                            </TouchableOpacity>
-                        ))}
+                            );
+                        })}
                     </View>
                 )}
             </ScrollView>
@@ -171,6 +281,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.base, paddingTop: STATUSBAR_HEIGHT + spacing.sm, paddingBottom: spacing.sm,
         backgroundColor: colors.background,
     },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+    },
     title: { fontSize: typography.sizes['2xl'], fontWeight: '700', color: colors.text },
     addBtn: { backgroundColor: colors.primary, paddingHorizontal: spacing.base, paddingVertical: spacing.sm, borderRadius: borderRadius.pill },
     addBtnText: { fontSize: typography.sizes.sm, fontWeight: '600', color: colors.textOnPrimary },
@@ -182,6 +297,32 @@ const styles = StyleSheet.create({
     mandiTitle: { fontSize: typography.sizes.sm, fontWeight: '600', color: colors.text },
     mandiSubtext: { fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: 2 },
     mandiArrow: { fontSize: typography.sizes.lg, color: colors.textSecondary },
+
+    // Cart Header
+    cartHeaderBtn: {
+        position: 'relative',
+        padding: spacing.sm,
+    },
+    cartHeaderIcon: {
+        fontSize: 22,
+    },
+    cartBadge: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        backgroundColor: colors.error,
+        borderRadius: 10,
+        minWidth: 18,
+        height: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 4,
+    },
+    cartBadgeText: {
+        color: '#FFF',
+        fontSize: 10,
+        fontWeight: '700',
+    },
 
     // States
     centerState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: spacing.md },
@@ -196,21 +337,49 @@ const styles = StyleSheet.create({
         width: '47%', backgroundColor: colors.surface, borderRadius: borderRadius.lg,
         ...shadows.sm, overflow: 'hidden',
     },
+    productCardSold: {
+        opacity: 0.85,
+    },
     productImageBox: {
         height: 110, backgroundColor: colors.surfaceLight, justifyContent: 'center', alignItems: 'center',
         position: 'relative', overflow: 'hidden',
     },
     productImage: { width: '100%', height: '100%' },
+    soldImage: { opacity: 0.4 },
     categoryBadge: {
         position: 'absolute', top: spacing.xs, left: spacing.xs,
         backgroundColor: colors.primary, paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.sm,
     },
     categoryBadgeText: { color: colors.textOnPrimary, fontSize: 10, fontWeight: '600' },
+
+    // SOLD overlay
+    soldOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    soldBanner: {
+        backgroundColor: 'rgba(230, 57, 70, 0.9)',
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.xs,
+        borderRadius: borderRadius.sm,
+        transform: [{ rotate: '-20deg' }],
+    },
+    soldBannerText: {
+        color: '#FFF',
+        fontSize: typography.sizes.lg,
+        fontWeight: '800',
+        letterSpacing: 2,
+    },
+
     productInfo: { padding: spacing.sm },
     productName: { fontSize: typography.sizes.md, fontWeight: '600', color: colors.text },
     productPrice: { fontSize: typography.sizes.base, fontWeight: '700', color: colors.primary, marginTop: 2 },
     productSeller: { fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: 4 },
     productLocation: { fontSize: typography.sizes.xs, color: colors.textLight, marginTop: 2 },
+    soldText: { color: colors.textLight },
     cartBtn: { backgroundColor: colors.primary, margin: spacing.sm, paddingVertical: spacing.sm, borderRadius: borderRadius.md, alignItems: 'center' },
     cartBtnText: { fontSize: typography.sizes.xs, fontWeight: '600', color: colors.textOnPrimary },
+    soldCartBtn: { backgroundColor: colors.divider },
+    soldCartBtnText: { color: colors.textLight },
 });

@@ -7,6 +7,7 @@ interface ResultCardProps {
     diseaseName: string;
     confidence: number;
     severity: 'Low' | 'Medium' | 'High';
+    severityLabel?: string;
     cropName: string;
     description: string;
 }
@@ -21,11 +22,12 @@ export default function ResultCard({
     diseaseName,
     confidence,
     severity,
+    severityLabel,
     cropName,
     description,
 }: ResultCardProps) {
     const confidenceColor = getConfidenceColor(confidence);
-    const severityStyle = SEVERITY_COLORS[severity];
+    const severityStyle = SEVERITY_COLORS[severity] || SEVERITY_COLORS.Low;
 
     return (
         <View style={styles.container}>
@@ -41,7 +43,7 @@ export default function ResultCard({
                     </View>
                     <View style={[styles.severityBadge, { backgroundColor: severityStyle.bg }]}>
                         <Text style={[styles.severityText, { color: severityStyle.text }]}>
-                            {severity}
+                            {severityLabel || severity}
                         </Text>
                     </View>
                 </View>

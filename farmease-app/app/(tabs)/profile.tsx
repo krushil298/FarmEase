@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { colors, spacing, typography, borderRadius, shadows } from '../../utils/theme';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useLanguageStore } from '../../store/useLanguageStore';
@@ -13,6 +13,7 @@ import { getLanguageByCode } from '../../utils/languages';
 import LocationPickerModal from '../../components/LocationPickerModal';
 import { LocationCoords } from '../../services/location';
 import { upsertProfile } from '../../services/auth';
+import { fetchFarmerRevenue } from '../../services/orders';
 
 export default function ProfileScreen() {
     const router = useRouter();
@@ -35,6 +36,16 @@ export default function ProfileScreen() {
     const [showLangModal, setShowLangModal] = useState(false);
     const [showMapPicker, setShowMapPicker] = useState(false);
     const [updatingLocation, setUpdatingLocation] = useState(false);
+    const [revenue, setRevenue] = useState<number | null>(null);
+
+    // Fetch revenue every time the profile screen is focused
+    useFocusEffect(
+        useCallback(() => {
+            if (role === 'farmer' && user?.id) {
+                fetchFarmerRevenue(user.id).then(setRevenue);
+            }
+        }, [role, user?.id])
+    );
 
     const handleLocationConfirm = async (coords: LocationCoords, address: string) => {
         if (!user) return;
@@ -46,6 +57,8 @@ export default function ProfileScreen() {
                 name: user.name || '',
                 role: user.role,
                 farm_location: address,
+                lat: coords.lat,
+                lng: coords.lng,
                 // keep existing values if needed, assuming upsert merges or we need full object
             });
             setUser(updatedProfile);
@@ -60,6 +73,7 @@ export default function ProfileScreen() {
     const currentLang = getLanguageByCode(language);
 
     const menuItems = [
+        { title: 'My Rental Bookings', emoji: '🚜', route: '', action: () => router.push('/rental-requests') },
         { title: t('profile.myOrders'), emoji: '📦', route: '', action: undefined },
         { title: t('profile.diseaseHistory'), emoji: '🔬', route: '', action: undefined },
         { title: t('profile.myListings'), emoji: '📋', route: '', farmerOnly: true, action: undefined },
@@ -100,6 +114,14 @@ export default function ProfileScreen() {
                     <Text style={styles.location}>📍 {user?.farm_location || 'Tap to add location'}</Text>
                     <Text style={styles.editIcon}>✎</Text>
                 </TouchableOpacity>
+
+                {/* Revenue Badge for Farmers */}
+                {role === 'farmer' && (
+                    <View style={styles.revenueContainer}>
+                        <Text style={styles.revenueLabel}>💰 Total Earned</Text>
+                        <Text style={styles.revenueValue}>₹{(revenue ?? 0).toLocaleString('en-IN')}</Text>
+                    </View>
+                )}
             </View>
 
             {/* Menu Items */}
@@ -145,7 +167,13 @@ export default function ProfileScreen() {
                 visible={showMapPicker}
                 onClose={() => setShowMapPicker(false)}
                 onConfirm={handleLocationConfirm}
+                initialCoords={
+                    user?.lat && user?.lng
+                        ? { lat: user.lat, lng: user.lng }
+                        : null
+                }
             />
+
         </ScrollView>
     );
 }
@@ -213,4 +241,14 @@ const styles = StyleSheet.create({
         marginBottom: spacing.md, gap: spacing.sm,
     },
     translatingText: { fontSize: typography.sizes.xs, color: '#fff', fontWeight: '600' },
+
+    // Revenue badge
+    revenueContainer: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        marginTop: spacing.md, backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+        borderRadius: borderRadius.full, gap: spacing.sm,
+    },
+    revenueLabel: { fontSize: typography.sizes.sm, color: colors.textOnPrimary, fontWeight: '500' },
+    revenueValue: { fontSize: typography.sizes.lg, color: '#FFD700', fontWeight: '800' },
 });

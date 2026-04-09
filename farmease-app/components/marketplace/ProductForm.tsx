@@ -81,6 +81,8 @@ export default function ProductForm({
             unit,
             image_url: imageUri || undefined,
             location: location.trim() || undefined,
+            lat: locationCoords?.lat,
+            lng: locationCoords?.lng,
         });
     };
 

@@ -72,7 +72,8 @@ export default function DiseaseResultScreen() {
                 <ResultCard
                     diseaseName={t(diseaseName)}
                     confidence={confidence}
-                    severity={severity as 'High' | 'Medium' | 'Low'}
+                    severity={rawSeverity}
+                    severityLabel={severity}
                     cropName={t(params.crop || 'detect.unknownCrop')}
                     description={t(description)}
                 />

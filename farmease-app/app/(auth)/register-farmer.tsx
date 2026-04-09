@@ -13,7 +13,7 @@ import type { LocationCoords } from '../../services/location';
 
 export default function RegisterFarmerScreen() {
     const router = useRouter();
-    const { session, setUser, setOnboarded } = useAuthStore();
+    const { session, user: existingUser, setUser, setOnboarded } = useAuthStore();
     const [name, setName] = useState('');
     const [farmLocation, setFarmLocation] = useState('');
     const [farmCoords, setFarmCoords] = useState<LocationCoords | null>(null);
@@ -26,12 +26,14 @@ export default function RegisterFarmerScreen() {
         setLoading(true);
         try {
             const profile = await upsertProfile({
-                id: session?.user?.id,
+                id: session?.user?.id || existingUser?.id,
                 phone: session?.user?.phone || '',
                 name,
                 role: 'farmer',
                 farm_location: farmLocation,
                 land_size: parseFloat(landSize) || 0,
+                lat: farmCoords?.lat,
+                lng: farmCoords?.lng,
             });
             setUser(profile);
             setOnboarded(true);

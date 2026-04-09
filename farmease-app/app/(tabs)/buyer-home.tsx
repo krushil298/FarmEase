@@ -54,130 +54,130 @@ export default function BuyerHomeScreen() {
 
     return (
         <View style={{ flex: 1 }}>
-        <ScrollView
-            style={styles.container}
-            showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-        >
-            {/* Header */}
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.greeting}>{getGreeting()}, {user?.name || 'Buyer'}!</Text>
-                    <Text style={styles.subtitle}>{t('buyerDashboard.subtitle')}</Text>
-                </View>
-                <TouchableOpacity style={styles.cartBadge} onPress={() => router.push('/cart' as any)}>
-                    <Text style={styles.cartIcon}>🛒</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Search */}
-            <SearchBar value={search} onChangeText={setSearch} placeholder="Search fresh produce..." />
-
-            {/* Featured Deals */}
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>{t('buyerDashboard.todaysDeals')}</Text>
-                    <TouchableOpacity onPress={() => router.push('/(tabs)/marketplace' as any)}>
-                        <Text style={styles.seeAll}>{t('common.seeAll')}</Text>
+            <ScrollView
+                style={styles.container}
+                showsVerticalScrollIndicator={false}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+            >
+                {/* Header */}
+                <View style={styles.header}>
+                    <View>
+                        <Text style={styles.greeting}>{t(getGreeting())}, {user?.name || 'Buyer'}!</Text>
+                        <Text style={styles.subtitle}>{t('buyerDashboard.subtitle')}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.cartBadge} onPress={() => router.push('/cart' as any)}>
+                        <Text style={styles.cartIcon}>🛒</Text>
                     </TouchableOpacity>
                 </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dealsRow}>
-                    {FEATURED_DEALS.map((deal) => (
-                        <TouchableOpacity
-                            key={deal.id}
-                            style={styles.dealCard}
-                            activeOpacity={0.8}
-                            onPress={() => router.push({ pathname: '/product-detail', params: deal } as any)}
-                        >
-                            <View style={styles.discountBadge}>
-                                <Text style={styles.discountText}>{deal.discount}</Text>
-                            </View>
-                            <View style={styles.dealImageBox}>
-                                <Text style={{ fontSize: 40 }}>{deal.emoji}</Text>
-                            </View>
-                            <View style={styles.dealInfo}>
-                                <Text style={styles.dealName} numberOfLines={1}>{t(deal.nameKey)}</Text>
-                                <View style={styles.priceRow}>
-                                    <Text style={styles.dealPrice}>{formatPrice(deal.price)}/{deal.unit}</Text>
-                                    <Text style={styles.originalPrice}>₹{deal.originalPrice}</Text>
+
+                {/* Search */}
+                <SearchBar value={search} onChangeText={setSearch} placeholder="Search fresh produce..." />
+
+                {/* Featured Deals */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>{t('buyerDashboard.todaysDeals')}</Text>
+                        <TouchableOpacity onPress={() => router.push('/(tabs)/marketplace' as any)}>
+                            <Text style={styles.seeAll}>{t('common.seeAll')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dealsRow}>
+                        {FEATURED_DEALS.map((deal) => (
+                            <TouchableOpacity
+                                key={deal.id}
+                                style={styles.dealCard}
+                                activeOpacity={0.8}
+                                onPress={() => router.push({ pathname: '/product-detail', params: deal } as any)}
+                            >
+                                <View style={styles.discountBadge}>
+                                    <Text style={styles.discountText}>{deal.discount}</Text>
                                 </View>
-                                <Text style={styles.dealSeller} numberOfLines={1}>🧑‍🌾 {deal.seller}</Text>
+                                <View style={styles.dealImageBox}>
+                                    <Text style={{ fontSize: 40 }}>{deal.emoji}</Text>
+                                </View>
+                                <View style={styles.dealInfo}>
+                                    <Text style={styles.dealName} numberOfLines={1}>{t(deal.nameKey)}</Text>
+                                    <View style={styles.priceRow}>
+                                        <Text style={styles.dealPrice}>{formatPrice(deal.price)}/{deal.unit}</Text>
+                                        <Text style={styles.originalPrice}>₹{deal.originalPrice}</Text>
+                                    </View>
+                                    <Text style={styles.dealSeller} numberOfLines={1}>🧑‍🌾 {deal.seller}</Text>
+                                </View>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+
+                {/* Browse Categories */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>{t('buyerDashboard.browseCategories')}</Text>
+                    <View style={styles.categoryGrid}>
+                        {BROWSE_CATEGORIES.map((cat) => (
+                            <TouchableOpacity
+                                key={cat.id}
+                                style={[styles.categoryCard, { backgroundColor: cat.color }]}
+                                activeOpacity={0.8}
+                                onPress={() => router.push('/(tabs)/marketplace' as any)}
+                            >
+                                <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
+                                <Text style={styles.categoryName}>{cat.name}</Text>
+                                <Text style={styles.categoryCount}>{cat.count}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+
+                {/* Nearby Farmers */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>{t('buyerDashboard.nearbyFarmers')}</Text>
+                    {NEARBY_FARMERS.map((farmer) => (
+                        <TouchableOpacity key={farmer.id} style={styles.farmerCard} activeOpacity={0.8}>
+                            <View style={styles.farmerAvatar}>
+                                <Text style={{ fontSize: 28 }}>{farmer.emoji}</Text>
+                            </View>
+                            <View style={styles.farmerInfo}>
+                                <Text style={styles.farmerName}>{farmer.name}</Text>
+                                <Text style={styles.farmerLocation}>📍 {farmer.location} · {farmer.distance}</Text>
+                                <Text style={styles.farmerMeta}>⭐ {farmer.rating} · {farmer.products} products</Text>
+                            </View>
+                            <View style={styles.visitBadge}>
+                                <Text style={styles.visitText}>{t('buyerDashboard.visit')}</Text>
                             </View>
                         </TouchableOpacity>
                     ))}
-                </ScrollView>
-            </View>
+                </View>
 
-            {/* Browse Categories */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{t('buyerDashboard.browseCategories')}</Text>
-                <View style={styles.categoryGrid}>
-                    {BROWSE_CATEGORIES.map((cat) => (
-                        <TouchableOpacity
-                            key={cat.id}
-                            style={[styles.categoryCard, { backgroundColor: cat.color }]}
-                            activeOpacity={0.8}
-                            onPress={() => router.push('/(tabs)/marketplace' as any)}
-                        >
-                            <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
-                            <Text style={styles.categoryName}>{cat.name}</Text>
-                            <Text style={styles.categoryCount}>{cat.count}</Text>
+                {/* Quick actions for buyer */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>{t('buyerDashboard.quickActions')}</Text>
+                    <View style={styles.quickRow}>
+                        <TouchableOpacity style={[styles.quickCard, { backgroundColor: '#8B6F47' }]} onPress={() => router.push('/(tabs)/marketplace' as any)}>
+                            <Text style={styles.quickEmoji}>🛍️</Text>
+                            <Text style={styles.quickLabel}>{t('buyerDashboard.shopNow')}</Text>
                         </TouchableOpacity>
-                    ))}
+                        <TouchableOpacity style={[styles.quickCard, { backgroundColor: '#B8860B' }]} onPress={() => router.push('/cart' as any)}>
+                            <Text style={styles.quickEmoji}>🛒</Text>
+                            <Text style={styles.quickLabel}>{t('buyerDashboard.myCart')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.quickCard, { backgroundColor: '#C06014' }]} onPress={() => router.push('/schemes' as any)}>
+                            <Text style={styles.quickEmoji}>📋</Text>
+                            <Text style={styles.quickLabel}>{t('buyerDashboard.schemes')}</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
-            </View>
 
-            {/* Nearby Farmers */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{t('buyerDashboard.nearbyFarmers')}</Text>
-                {NEARBY_FARMERS.map((farmer) => (
-                    <TouchableOpacity key={farmer.id} style={styles.farmerCard} activeOpacity={0.8}>
-                        <View style={styles.farmerAvatar}>
-                            <Text style={{ fontSize: 28 }}>{farmer.emoji}</Text>
-                        </View>
-                        <View style={styles.farmerInfo}>
-                            <Text style={styles.farmerName}>{farmer.name}</Text>
-                            <Text style={styles.farmerLocation}>📍 {farmer.location} · {farmer.distance}</Text>
-                            <Text style={styles.farmerMeta}>⭐ {farmer.rating} · {farmer.products} products</Text>
-                        </View>
-                        <View style={styles.visitBadge}>
-                            <Text style={styles.visitText}>{t('buyerDashboard.visit')}</Text>
-                        </View>
-                    </TouchableOpacity>
-                ))}
-            </View>
+                {/* Mandi Prices */}
+                <TouchableOpacity style={styles.mandiBanner}>
+                    <Text style={{ fontSize: 20 }}>📈</Text>
+                    <View style={{ flex: 1, marginLeft: spacing.md }}>
+                        <Text style={styles.mandiTitle}>{t('buyerDashboard.mandiTitle')}</Text>
+                        <Text style={styles.mandiSubtext}>{t('buyerDashboard.mandiSubtext')}</Text>
+                    </View>
+                    <Text style={{ fontSize: typography.sizes.lg, color: colors.textSecondary }}>→</Text>
+                </TouchableOpacity>
 
-            {/* Quick actions for buyer */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{t('buyerDashboard.quickActions')}</Text>
-                <View style={styles.quickRow}>
-                    <TouchableOpacity style={[styles.quickCard, { backgroundColor: '#8B6F47' }]} onPress={() => router.push('/(tabs)/marketplace' as any)}>
-                        <Text style={styles.quickEmoji}>🛍️</Text>
-                        <Text style={styles.quickLabel}>{t('buyerDashboard.shopNow')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.quickCard, { backgroundColor: '#B8860B' }]} onPress={() => router.push('/cart' as any)}>
-                        <Text style={styles.quickEmoji}>🛒</Text>
-                        <Text style={styles.quickLabel}>{t('buyerDashboard.myCart')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.quickCard, { backgroundColor: '#C06014' }]} onPress={() => router.push('/schemes' as any)}>
-                        <Text style={styles.quickEmoji}>📋</Text>
-                        <Text style={styles.quickLabel}>{t('buyerDashboard.schemes')}</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            {/* Mandi Prices */}
-            <TouchableOpacity style={styles.mandiBanner}>
-                <Text style={{ fontSize: 20 }}>📈</Text>
-                <View style={{ flex: 1, marginLeft: spacing.md }}>
-                    <Text style={styles.mandiTitle}>{t('buyerDashboard.mandiTitle')}</Text>
-                    <Text style={styles.mandiSubtext}>{t('buyerDashboard.mandiSubtext')}</Text>
-                </View>
-                <Text style={{ fontSize: typography.sizes.lg, color: colors.textSecondary }}>→</Text>
-            </TouchableOpacity>
-
-            <View style={{ height: spacing['3xl'] }} />
-        </ScrollView>
+                <View style={{ height: spacing['3xl'] }} />
+            </ScrollView>
 
             {/* AI Chatbot FAB */}
             <ChatFAB onPress={() => setShowChat(true)} />

@@ -89,6 +89,8 @@ export interface Product {
     unit: string; // kg, quintal, dozen, piece, litre
     image_url?: string;
     location?: string;
+    lat?: number;
+    lng?: number;
     is_available: boolean;
 }
 
@@ -101,6 +103,8 @@ export interface CreateProductInput {
     unit: string;
     image_url?: string;
     location?: string;
+    lat?: number;
+    lng?: number;
 }
 
 export type SortOption = 'newest' | 'price_low' | 'price_high';
@@ -111,6 +115,10 @@ export interface ProductFilters {
     minPrice?: number;
     maxPrice?: number;
     sort?: SortOption;
+    includeSold?: boolean;
+    radiusKm?: number;
+    userLat?: number;
+    userLng?: number;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -140,6 +148,8 @@ function rowToProduct(row: any): Product {
         unit: row.unit,
         image_url: row.image_url || undefined,
         location: row.location || undefined,
+        lat: row.lat !== null ? Number(row.lat) : undefined,
+        lng: row.lng !== null ? Number(row.lng) : undefined,
         is_available: row.is_available,
     };
 }
@@ -148,7 +158,7 @@ function rowToProduct(row: any): Product {
 
 const PRODUCT_SELECT = `
     id, created_at, seller_id, name, description, category,
-    price, quantity, unit, image_url, location, is_available,
+    price, quantity, unit, image_url, location, lat, lng, is_available,
     seller:users!seller_id ( name, phone, farm_location )
 `;
 
@@ -156,10 +166,24 @@ const PRODUCT_SELECT = `
 
 export async function fetchProducts(filters: ProductFilters = {}): Promise<Product[]> {
     try {
-        let query = supabase
-            .from('products')
-            .select(PRODUCT_SELECT)
-            .eq('is_available', true);
+        let query;
+
+        if (filters.radiusKm && filters.userLat !== undefined && filters.userLng !== undefined) {
+            query = supabase.rpc('get_products_within_radius', {
+                user_lat: filters.userLat,
+                user_lng: filters.userLng,
+                radius_km: filters.radiusKm,
+                p_include_sold: !!filters.includeSold
+            }).select(PRODUCT_SELECT);
+        } else {
+            query = supabase
+                .from('products')
+                .select(PRODUCT_SELECT);
+
+            if (!filters.includeSold) {
+                query = query.eq('is_available', true);
+            }
+        }
 
         if (filters.category && filters.category !== 'All') {
             query = query.eq('category', filters.category);
@@ -188,7 +212,7 @@ export async function fetchProducts(filters: ProductFilters = {}): Promise<Produ
         }
 
         const { data, error } = await query;
-        console.log('[fetchProducts] raw data count:', data?.length, 'error:', error);
+        console.log('[fetchProducts] raw data count:', (data as any[])?.length, 'error:', error);
         if (error) throw error;
         return (data as any[]).map(rowToProduct);
     } catch (err) {
@@ -226,6 +250,8 @@ export async function createProduct(
             unit: input.unit,
             image_url: input.image_url || null,
             location: input.location || null,
+            lat: input.lat || null,
+            lng: input.lng || null,
             seller_id: sellerId,
             is_available: true,
         };

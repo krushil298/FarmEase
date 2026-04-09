@@ -73,9 +73,16 @@ export default function LoginScreen() {
         setLoading(true);
         setError('');
         try {
-            const data = await verifyOtp(`+91${phone}`, otp);
-            setSession(data.session);
-            router.replace('/(auth)/role-select');
+            await verifyOtp(`+91${phone}`, otp);
+
+            // Re-initialize store so it fetches the profile and sets isOnboarded
+            await useAuthStore.getState().initialize();
+
+            if (useAuthStore.getState().isOnboarded) {
+                router.replace('/(tabs)');
+            } else {
+                router.replace('/(auth)/role-select');
+            }
         } catch (err: any) {
             setError(err.message || t('login.invalidOtp'));
         } finally {

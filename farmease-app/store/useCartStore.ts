@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-interface CartItem {
+export interface CartItem {
     id: string;
     name: string;
     price: number;
@@ -8,6 +8,7 @@ interface CartItem {
     unit: string;
     image_url?: string;
     seller_name: string;
+    seller_id: string;
 }
 
 interface CartState {

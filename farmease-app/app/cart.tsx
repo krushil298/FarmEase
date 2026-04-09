@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -7,30 +7,75 @@ import {
     TouchableOpacity,
     StyleSheet,
     Alert,
+    TextInput,
+    ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Header from '../components/ui/Header';
 import Button from '../components/ui/Button';
 import { useCartStore } from '../store/useCartStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { placeOrder } from '../services/orders';
 import { colors, borderRadius, spacing, typography, shadows } from '../utils/theme';
 import { useTranslation } from '../hooks/useTranslation';
+import LocationPickerModal from '../components/LocationPickerModal';
+import { LocationCoords } from '../services/location';
 
 const DELIVERY_FEE = 49;
 
 export default function CartScreen() {
     const router = useRouter();
     const { items, updateQuantity, removeItem, clearCart, getTotal } = useCartStore();
+    const { user } = useAuthStore();
     const { t } = useTranslation();
+
+    const [deliveryAddress, setDeliveryAddress] = useState(user?.delivery_address || '');
+    const [deliveryCoords, setDeliveryCoords] = useState<LocationCoords | null>(null);
+    const [placing, setPlacing] = useState(false);
+    const [showLocationPicker, setShowLocationPicker] = useState(false);
 
     const subtotal = getTotal();
     const total = items.length > 0 ? subtotal + DELIVERY_FEE : 0;
 
-    const handlePlaceOrder = () => {
-        Alert.alert(
-            t('cart.orderSuccess'),
-            `${t('cart.orderSuccessMsg').replace('{total}', total.toLocaleString('en-IN'))}\n\n₹${total.toLocaleString('en-IN')}`,
-            [{ text: t('cart.done'), onPress: () => { clearCart(); router.back(); } }]
-        );
+    const handlePlaceOrder = async () => {
+        if (!user?.id) {
+            Alert.alert('Login Required', 'Please log in to place an order.');
+            return;
+        }
+
+        if (!deliveryAddress.trim()) {
+            Alert.alert('Address Required', 'Please enter a delivery address to continue.');
+            return;
+        }
+
+        setPlacing(true);
+
+        const orderItems = items.map((item) => ({
+            product_id: item.id,
+            seller_id: item.seller_id,
+            quantity: item.quantity,
+            unit_price: item.price,
+            product_name: item.name,
+        }));
+
+        const result = await placeOrder(user.id, orderItems, deliveryAddress.trim());
+
+        setPlacing(false);
+
+        if (result.success) {
+            clearCart();
+            Alert.alert(
+                '🎉 Order Placed!',
+                `Your order of ₹${total.toLocaleString('en-IN')} has been placed successfully!\n\n${result.orderIds.length} item(s) ordered.\nYou'll be contacted by the seller(s) shortly.`,
+                [{ text: 'Back to Marketplace', onPress: () => router.back() }]
+            );
+        } else {
+            Alert.alert(
+                'Order Failed',
+                result.error || 'Something went wrong. Please try again.',
+                [{ text: 'OK' }]
+            );
+        }
     };
 
     const renderCartItem = ({ item }: { item: typeof items[0] }) => (
@@ -90,9 +135,9 @@ export default function CartScreen() {
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>🛒</Text>
-            <Text style={styles.emptyTitle}>{t('cart.emptyTitle')}</Text>
-            <Text style={styles.emptySubtitle}>{t('cart.emptySubtitle')}</Text>
-            <Button title={t('cart.browseMarketplace')} onPress={() => router.back()} variant="outline" style={styles.browseButton} />
+            <Text style={styles.emptyTitle}>{t('cart.emptyTitle') || 'Your cart is empty'}</Text>
+            <Text style={styles.emptySubtitle}>{t('cart.emptySubtitle') || 'Add some fresh produce from the marketplace'}</Text>
+            <Button title={t('cart.browseMarketplace') || 'Browse Marketplace'} onPress={() => router.back()} variant="outline" style={styles.browseButton} />
         </View>
     );
 
@@ -106,7 +151,7 @@ export default function CartScreen() {
                 rightAction={
                     items.length > 0 ? (
                         <TouchableOpacity onPress={clearCart} activeOpacity={0.7}>
-                            <Text style={styles.clearText}>{t('cart.clearAll')}</Text>
+                            <Text style={styles.clearText}>{t('cart.clearAll') || 'Clear All'}</Text>
                         </TouchableOpacity>
                     ) : undefined
                 }
@@ -119,37 +164,82 @@ export default function CartScreen() {
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={renderEmpty}
+                ListFooterComponent={
+                    items.length > 0 ? (
+                        <View style={styles.addressSection}>
+                            <View style={styles.addressHeaderRow}>
+                                <Text style={styles.addressLabel}>📍 Delivery Address</Text>
+                                <TouchableOpacity onPress={() => setShowLocationPicker(true)}>
+                                    <Text style={styles.changeAddressText}>
+                                        {deliveryAddress ? 'Change' : 'Select on Map'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <TouchableOpacity
+                                style={styles.addressDisplayBox}
+                                onPress={() => setShowLocationPicker(true)}
+                                activeOpacity={0.7}
+                            >
+                                {deliveryAddress ? (
+                                    <Text style={styles.addressDisplayText}>{deliveryAddress}</Text>
+                                ) : (
+                                    <Text style={styles.addressPlaceholderText}>Tap to select delivery location...</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    ) : null
+                }
             />
 
             {/* Order Summary & Checkout */}
             {items.length > 0 && (
                 <View style={styles.summaryContainer}>
                     <View style={styles.summaryCard}>
-                        <Text style={styles.summaryTitle}>{t('cart.orderSummary')}</Text>
+                        <Text style={styles.summaryTitle}>{t('cart.orderSummary') || 'Order Summary'}</Text>
 
                         <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>{t('cart.subtotal')}</Text>
+                            <Text style={styles.summaryLabel}>{t('cart.subtotal') || 'Subtotal'}</Text>
                             <Text style={styles.summaryValue}>₹{subtotal.toLocaleString('en-IN')}</Text>
                         </View>
                         <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>{t('cart.deliveryFee')}</Text>
+                            <Text style={styles.summaryLabel}>{t('cart.deliveryFee') || 'Delivery Fee'}</Text>
                             <Text style={styles.summaryValue}>₹{DELIVERY_FEE}</Text>
                         </View>
                         <View style={[styles.summaryRow, styles.totalRow]}>
-                            <Text style={styles.totalLabel}>{t('cart.total')}</Text>
+                            <Text style={styles.totalLabel}>{t('cart.total') || 'Total'}</Text>
                             <Text style={styles.totalValue}>₹{total.toLocaleString('en-IN')}</Text>
                         </View>
 
                         <Button
-                            title={`${t('cart.placeOrder')}  ·  ₹${total.toLocaleString('en-IN')}`}
+                            title={placing ? 'Placing Order...' : `Place Order  ·  ₹${total.toLocaleString('en-IN')}`}
                             onPress={handlePlaceOrder}
                             fullWidth
                             size="lg"
                             style={styles.checkoutButton}
+                            disabled={placing}
                         />
+                        {placing && (
+                            <ActivityIndicator
+                                size="small"
+                                color={colors.primary}
+                                style={{ marginTop: spacing.sm }}
+                            />
+                        )}
                     </View>
                 </View>
             )}
+
+            <LocationPickerModal
+                visible={showLocationPicker}
+                initialCoords={deliveryCoords}
+                onClose={() => setShowLocationPicker(false)}
+                onConfirm={(coords, address) => {
+                    setDeliveryCoords(coords);
+                    setDeliveryAddress(address);
+                    setShowLocationPicker(false);
+                }}
+            />
         </View>
     );
 }
@@ -161,7 +251,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: spacing.base,
-        paddingBottom: 260,
+        paddingBottom: 300,
     },
     clearText: {
         color: colors.error,
@@ -250,6 +340,51 @@ const styles = StyleSheet.create({
     removeIcon: {
         fontSize: 14,
         color: colors.textLight,
+    },
+
+    // Delivery Address
+    addressSection: {
+        marginTop: spacing.md,
+        backgroundColor: colors.surface,
+        borderRadius: borderRadius.lg,
+        padding: spacing.base,
+        ...shadows.sm,
+    },
+    addressLabel: {
+        fontSize: typography.sizes.md,
+        fontWeight: '600',
+        color: colors.text,
+        marginBottom: spacing.sm,
+    },
+    addressHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.sm,
+    },
+    changeAddressText: {
+        fontSize: typography.sizes.sm,
+        color: colors.primary,
+        fontWeight: '600',
+    },
+    addressDisplayBox: {
+        backgroundColor: colors.surfaceLight,
+        borderRadius: borderRadius.md,
+        padding: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        minHeight: 60,
+        justifyContent: 'center',
+    },
+    addressDisplayText: {
+        fontSize: typography.sizes.base,
+        color: colors.text,
+        lineHeight: 22,
+    },
+    addressPlaceholderText: {
+        fontSize: typography.sizes.base,
+        color: colors.textLight,
+        fontStyle: 'italic',
     },
 
     // Empty
