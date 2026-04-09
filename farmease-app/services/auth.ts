@@ -98,7 +98,8 @@ function isValidUUID(id: string): boolean {
 
 // Verify OTP
 export const verifyOtp = async (phone: string, token: string) => {
-    if (token === '123456') {
+    // Dummy auth bypass — ONLY available in development builds
+    if (__DEV__ && token === '123456') {
         const dummyId = phoneToDummyUUID(phone);
 
         // Check if we already have a dummy session for this phone

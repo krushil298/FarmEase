@@ -9,9 +9,10 @@ import os
 import time
 import requests as _requests
 from collections import defaultdict
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Depends, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from dotenv import load_dotenv
@@ -49,6 +50,17 @@ load_dotenv()
 
 MOCK_MODE = os.getenv("MOCK_MODE", "false").lower() == "true"
 
+# ─── API Key Authentication ───────────────────────────────────────────────────
+FARMEASE_API_KEY = os.getenv("FARMEASE_API_KEY", "")
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+async def verify_api_key(api_key: str = Security(_api_key_header)):
+    """Validate the X-API-Key header. Skip if FARMEASE_API_KEY is not configured."""
+    if not FARMEASE_API_KEY:
+        return  # No key configured = auth disabled (dev mode)
+    if api_key != FARMEASE_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
 # ─── HuggingFace config ───────────────────────────────────────────────────────
 HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "")
 HF_MODEL_URL = "https://api-inference.huggingface.co/models/bharatgenai/sooktam2"
@@ -78,7 +90,7 @@ app = FastAPI(
 )
 
 # ─── CORS middleware ──────────────────────────────────────────────────────────
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:8081,http://localhost:19006").split(",")
 _allow_credentials = "*" not in ALLOWED_ORIGINS
 
 app.add_middleware(
@@ -123,7 +135,7 @@ def health_check():
 
 # ─── /speak — HuggingFace TTS (bharatgenai/sooktam2) ─────────────────────────
 @app.post("/speak")
-def speak(req: SpeakRequest, request: Request):
+def speak(req: SpeakRequest, request: Request, _key: None = Depends(verify_api_key)):
     """
     Convert text to speech using the HuggingFace Inference API.
     Returns raw audio bytes (wav / mpeg) as a StreamingResponse.
@@ -196,7 +208,7 @@ def speak(req: SpeakRequest, request: Request):
 
 # ─── /transcribe — Speech-to-Text using Groq Whisper ─────────────────────────
 @app.post("/transcribe")
-async def transcribe(file: UploadFile = File(...), request: Request = None):
+async def transcribe(file: UploadFile = File(...), request: Request = None, _key: None = Depends(verify_api_key)):
     """
     Convert speech audio to text using Groq's Whisper model.
     Accepts audio files (wav, mp3, m4a, webm, ogg).
@@ -244,7 +256,7 @@ async def transcribe(file: UploadFile = File(...), request: Request = None):
 
 # ─── Chat endpoint ────────────────────────────────────────────────────────────
 @app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest, req: Request):
+def chat(request: ChatRequest, req: Request, _key: None = Depends(verify_api_key)):
     # Rate limiting
     client_ip = req.client.host if req.client else "unknown"
     _check_rate_limit(client_ip)

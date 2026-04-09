@@ -5,9 +5,9 @@ import { Platform } from 'react-native';
 export const APP_NAME = 'FarmEase';
 export const APP_TAGLINE = 'From Soil to Sale';
 
-// Supabase config
-export const SUPABASE_URL = 'https://nmzigjuysnepapgyperl.supabase.co';
-export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5temlnanV5c25lcGFwZ3lwZXJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNzAyMzYsImV4cCI6MjA4Nzc0NjIzNn0.u9Fg6ul8-8OubfbVnnZACw180pCIPWWD8cJX0yJartU';
+// Supabase config — loaded from .env (NEVER hardcode secrets)
+export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+export const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
 // API endpoints
 let localIp = Constants.expoConfig?.hostUri?.split(':')[0];
